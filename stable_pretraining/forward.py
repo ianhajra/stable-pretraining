@@ -1050,3 +1050,202 @@ def dinov2_forward(self, batch, stage):
     self.log(f"{stage}/loss", out["loss"], on_step=True, on_epoch=True, sync_dist=True)
 
     return out
+
+
+def siglip_forward(self, batch, stage):
+    """Forward function for SigLIP (Sigmoid Loss for Language-Image Pre-Training).
+
+    Adapts the SigLIP image-text sigmoid loss to the image-only self-supervised
+    setting: two augmented views of the same image are treated as positive pairs
+    while all cross-image pairs in the batch are negatives.
+
+    Unlike SimCLR's softmax normalisation, the sigmoid loss treats every element
+    of the NxN pairwise similarity matrix as an independent binary classification,
+    which removes the need for negative mining and scales gracefully with batch
+    size.
+
+    Args:
+        self: Module instance with required attributes:
+            - backbone: Feature extraction network
+            - projector: Projection MLP
+            - siglip_loss: :class:`~stable_pretraining.losses.SigLIPLoss` instance
+        batch: Multi-view batch (two views) from :class:`MultiViewTransform`, or a
+            single-view batch dict for validation.
+        stage: Training stage (``'train'``, ``'val'``, or ``'test'``).
+
+    Returns:
+        dict with keys:
+            - ``'embedding'``: Backbone features (for probes/callbacks).
+            - ``'loss'``: Sigmoid contrastive loss (training only).
+            - ``'label'``: Labels if present in the batch.
+
+    Note:
+        Introduced in Zhai et al., "Sigmoid Loss for Language Image Pre-Training"
+        (arXiv:2303.15343).
+    """
+    out = {}
+
+    views = _get_views_list(batch)
+    if views is not None:
+        if len(views) != 2:
+            raise ValueError(
+                f"siglip_forward requires exactly 2 views, got {len(views)}. "
+                "For other configurations, please implement a custom forward function."
+            )
+
+        embeddings = [self.backbone(view["image"]) for view in views]
+        out["embedding"] = torch.cat(embeddings, dim=0)
+
+        if "label" in views[0]:
+            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+
+        if self.training:
+            if not hasattr(self, "siglip_loss"):
+                raise ValueError(
+                    "siglip_forward requires 'siglip_loss' to be provided "
+                    "(e.g., spt.losses.SigLIPLoss()). "
+                    "Pass it when constructing the Module: "
+                    "Module(..., siglip_loss=spt.losses.SigLIPLoss(), ...)"
+                )
+            projections = [self.projector(emb) for emb in embeddings]
+            out["loss"] = self.siglip_loss(projections[0], projections[1])
+            self.log(
+                f"{stage}/loss",
+                out["loss"],
+                on_step=True,
+                on_epoch=True,
+                sync_dist=True,
+            )
+    else:
+        out["embedding"] = self.backbone(batch["image"])
+        if "label" in batch:
+            out["label"] = batch["label"]
+
+    return out
+
+
+def siglip2_forward(self, batch, stage):
+    """Forward function for SigLIP 2 (vision-only self-supervised adaptation).
+
+    Combines the SigLIP 2 multi-positive sigmoid loss with EMA self-distillation:
+    a student encoder is trained to match the representations produced by a
+    momentum-updated teacher encoder across multiple augmented views of the same
+    image.
+
+    Compared to :func:`siglip_forward`:
+    * An EMA teacher (via :class:`~stable_pretraining.backbone.TeacherStudentWrapper`)
+      provides stable, high-quality targets — analogous to BYOL / DINO.
+    * The multi-positive :class:`~stable_pretraining.losses.SigLIP2Loss` treats all
+      views that originate from the *same source image* as positives, enabling
+      multi-crop training.
+
+    Training setup::
+
+        backbone = spt.TeacherStudentWrapper(resnet50_or_vitb)
+        projector = spt.TeacherStudentWrapper(mlp_head)
+        module = spt.Module(
+            backbone=backbone,
+            projector=projector,
+            forward=siglip2_forward,
+            siglip2_loss=spt.losses.SigLIP2Loss(),
+        )
+
+    Args:
+        self: Module instance with required attributes:
+            - backbone: :class:`~stable_pretraining.backbone.TeacherStudentWrapper`
+            - projector: :class:`~stable_pretraining.backbone.TeacherStudentWrapper`
+            - siglip2_loss: :class:`~stable_pretraining.losses.SigLIP2Loss` instance
+        batch: Multi-view batch from :class:`MultiViewTransform` (≥ 2 views), or a
+            single-view batch dict for validation.
+        stage: Training stage (``'train'``, ``'val'``, or ``'test'``).
+
+    Returns:
+        dict with keys:
+            - ``'embedding'``: Teacher backbone features (for probes/callbacks).
+            - ``'loss'``: Multi-positive sigmoid distillation loss (training only).
+            - ``'label'``: Labels if present.
+
+    Note:
+        Introduced in Tschannen et al., "SigLIP 2: Multilingual Vision-Language
+        Encoders with Improved Semantic Understanding, Localisation, and Dense
+        Features" (arXiv:2502.14786).
+    """
+    out = {}
+
+    views = _get_views_list(batch)
+
+    if views is None:
+        # Single-view validation: run through teacher
+        if "label" in batch:
+            out["label"] = batch["label"]
+        with torch.no_grad():
+            teacher_feats = self.backbone.forward_teacher(batch["image"])
+        out["embedding"] = teacher_feats.detach()
+        return out
+
+    n_views = len(views)
+    if n_views < 2:
+        raise ValueError(f"siglip2_forward requires at least 2 views, got {n_views}.")
+
+    batch_size = views[0]["image"].shape[0]
+    images = [view["image"] for view in views]
+
+    if "label" in views[0]:
+        out["label"] = torch.cat([view["label"] for view in views], dim=0)
+
+    if not self.training:
+        all_images = torch.cat(images, dim=0)
+        with torch.no_grad():
+            teacher_feats = self.backbone.forward_teacher(all_images)
+        out["embedding"] = teacher_feats.detach()
+        return out
+
+    if not hasattr(self, "siglip2_loss"):
+        raise ValueError(
+            "siglip2_forward requires 'siglip2_loss' to be provided "
+            "(e.g., spt.losses.SigLIP2Loss()). "
+            "Pass it when constructing the Module: "
+            "Module(..., siglip2_loss=spt.losses.SigLIP2Loss(), ...)"
+        )
+
+    # Student projections for all views
+    student_projs = []
+    for img in images:
+        feat = self.backbone.forward_student(img)
+        student_projs.append(self.projector.forward_student(feat))
+
+    # Teacher projections (no grad) for all views
+    with torch.no_grad():
+        teacher_projs = []
+        teacher_feats_list = []
+        for img in images:
+            feat = self.backbone.forward_teacher(img)
+            teacher_feats_list.append(feat)
+            teacher_projs.append(self.projector.forward_teacher(feat))
+
+    # Build multi-positive source IDs: each index must be globally unique across
+    # all distributed ranks so that all_gather inside SigLIP2Loss does not
+    # accidentally mark cross-device pairs as positives.
+    # Without the rank offset every GPU would produce [0, 1, ..., B-1], and after
+    # gathering you'd get [0..B-1, 0..B-1, ...] — causing rank 0's image 0 to be
+    # treated as a positive match for rank 1's image 0.
+    rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
+    source_ids = torch.arange(batch_size, device=images[0].device) + rank * batch_size
+
+    # Concatenate all view projections (student vs teacher)
+    all_student = torch.cat(student_projs, dim=0)  # [n_views * B, D]
+    all_teacher = torch.cat(teacher_projs, dim=0)  # [n_views * B, D]
+    all_source_ids = source_ids.repeat(n_views)  # [n_views * B]
+
+    out["loss"] = self.siglip2_loss(
+        all_student,
+        all_teacher,
+        source_ids_i=all_source_ids,
+        source_ids_j=all_source_ids,
+    )
+    self.log(f"{stage}/loss", out["loss"], on_step=True, on_epoch=True, sync_dist=True)
+
+    # Teacher features from the first view for callbacks (probes, KNN, etc.)
+    out["embedding"] = teacher_feats_list[0].detach()
+
+    return out
