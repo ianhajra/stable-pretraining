@@ -48,6 +48,7 @@ from stable_pretraining.backbone import (
     TeacherStudentWrapper,
 )
 from stable_pretraining import Module
+from stable_pretraining.methods.adaptive_masking import AdaptiveMasking
 
 
 @dataclass
@@ -150,6 +151,7 @@ class IJEPA(Module):
         ema_decay_start: float = 0.996,
         ema_decay_end: float = 1.0,
         pretrained: bool = False,
+        use_adaptive_masking: bool = False,
     ):
         super().__init__()
 
@@ -195,6 +197,14 @@ class IJEPA(Module):
 
         self.embed_dim = embed_dim
         self._fix_init_weight()
+
+        # Optional adaptive masking — m_base derived from mean target_scale
+        _m_base = (target_scale[0] + target_scale[1]) / 2.0
+        self.adaptive_masking: AdaptiveMasking | None = (
+            AdaptiveMasking(m_base=_m_base, batch_size=0)
+            if use_adaptive_masking
+            else None
+        )
 
     def _encode(
         self,
@@ -255,7 +265,13 @@ class IJEPA(Module):
         teacher_patches = self.encoder.teacher.patch_embed(images)
 
         # Apply masking (returns all patches as context in eval mode)
-        mask_out = self.masking(student_patches, grid_h, grid_w)
+        if self.training and self.adaptive_masking is not None:
+            context_ratios = self.adaptive_masking.get_ratios(B).to(images.device)
+            mask_out = self.masking(
+                student_patches, grid_h, grid_w, context_ratios=context_ratios
+            )
+        else:
+            mask_out = self.masking(student_patches, grid_h, grid_w)
 
         if self.training:
             # Context: student sees only context patches
@@ -317,6 +333,11 @@ class IJEPA(Module):
             )
 
             loss = F.smooth_l1_loss(predictions, targets, beta=1.0)
+            if self.adaptive_masking is not None:
+                per_sample = F.smooth_l1_loss(
+                    predictions, targets, beta=1.0, reduction="none"
+                ).mean(dim=(1, 2))
+                self.adaptive_masking.update(per_sample)
         else:
             # Eval: encode all patches through student
             with torch.no_grad():

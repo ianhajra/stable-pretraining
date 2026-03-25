@@ -33,6 +33,7 @@ from typing import Union
 from stable_pretraining.backbone import MAEDecoder, MaskedEncoder, PatchMasking
 from stable_pretraining.utils import MAELoss
 from stable_pretraining import Module
+from stable_pretraining.methods.adaptive_masking import AdaptiveMasking
 
 
 @dataclass
@@ -113,6 +114,7 @@ class MAE(Module):
         loss_type: str = "mse",
         pretrained: bool = False,
         masking: Optional[nn.Module] = None,
+        use_adaptive_masking: bool = False,
     ):
         super().__init__()
 
@@ -149,6 +151,13 @@ class MAE(Module):
             patch_normalize=norm_pix_loss,
         )
 
+        # Optional adaptive masking
+        self.adaptive_masking: AdaptiveMasking | None = (
+            AdaptiveMasking(m_base=self.masking.mask_ratio, batch_size=0)
+            if use_adaptive_masking
+            else None
+        )
+
     def forward(self, images: torch.Tensor) -> MAEOutput:
         """Forward pass.
 
@@ -158,7 +167,13 @@ class MAE(Module):
         :param images: Input images [B, C, H, W]
         :return: MAEOutput with loss and reconstructions
         """
-        enc_out = self.encoder(images)
+        if self.training and self.adaptive_masking is not None:
+            mask_ratios = self.adaptive_masking.get_ratios(images.shape[0]).to(
+                images.device
+            )
+            enc_out = self.encoder(images, mask_ratios=mask_ratios)
+        else:
+            enc_out = self.encoder(images)
 
         # Decode (output_masked_only=False gives full reconstruction)
         encoded_patches = enc_out.encoded[:, self.encoder.num_prefix_tokens :]
@@ -170,7 +185,11 @@ class MAE(Module):
         )
 
         if self.training:
-            loss = self.loss_fn(predictions, images.to(predictions.dtype), enc_out.mask)
+            imgs = images.to(predictions.dtype)
+            loss = self.loss_fn(predictions, imgs, enc_out.mask)
+            if self.adaptive_masking is not None:
+                per_sample = self.loss_fn.per_sample(predictions, imgs, enc_out.mask)
+                self.adaptive_masking.update(per_sample)
             num_masked = int(enc_out.mask.sum(dim=1)[0].item())
         else:
             loss = torch.tensor(0.0, device=images.device)

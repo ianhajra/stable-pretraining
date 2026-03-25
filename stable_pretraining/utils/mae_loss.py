@@ -424,6 +424,33 @@ class MAELoss(nn.Module):
         assert not torch.isnan(loss), "Loss is NaN"
         return loss
 
+    def per_sample(
+        self,
+        pred: torch.Tensor,
+        imgs: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute per-sample reconstruction loss.
+
+        Same computation as :meth:`forward` but returns one scalar per image
+        instead of a single batch-level scalar.
+
+        :param pred: Decoder predictions, shape (N, T, patch_size² × C)
+        :param imgs: Original images, shape (N, C, H, W)
+        :param mask: Binary mask, shape (N, T), 1 = masked
+        :return: Per-sample losses, shape (N,)
+        """
+        target = self.patchify(imgs)
+        if self.patch_normalize:
+            mean = target.mean(dim=-1, keepdim=True)
+            var = target.var(dim=-1, keepdim=True)
+            target = (target - mean) / (var + 1e-6).sqrt()
+        loss = self._compute_loss(pred, target)  # (N, T)
+        if self.mask_only:
+            denom = mask.sum(dim=1).clamp(min=1)
+            return (loss * mask).sum(dim=1) / denom  # (N,)
+        return loss.mean(dim=1)  # (N,)
+
     def _print_debug(
         self, pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor
     ):

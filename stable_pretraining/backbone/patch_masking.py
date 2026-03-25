@@ -5,7 +5,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from stable_pretraining.data.masking import multi_block_mask
 
@@ -104,12 +104,15 @@ class PatchMasking(nn.Module):
         x: torch.Tensor,
         grid_h: int,
         grid_w: int,
+        mask_ratios: Optional[torch.Tensor] = None,
     ) -> MaskingOutput:
         """Apply masking to patch embeddings.
 
         :param x: Patch embeddings of shape (B, N, D) where N = grid_h * grid_w
         :param grid_h: Height of the patch grid
         :param grid_w: Width of the patch grid
+        :param mask_ratios: Optional per-sample masking ratios [B]. When None,
+            falls back to the uniform ``self.mask_ratio`` (default behaviour).
         :return: MaskingOutput containing visible patches and mask information
         :raises ValueError: If x.shape[1] != grid_h * grid_w
         :raises ValueError: If input tensor has wrong number of dimensions
@@ -143,6 +146,11 @@ class PatchMasking(nn.Module):
         # Determine which strategy to use per sample
         use_crop = torch.rand(B, device=device) < self.crop_ratio
         noise = torch.rand(B, N, device=device)
+
+        # Per-sample ratio bias: shift noise so harder samples see more patches
+        if mask_ratios is not None:
+            shift = (mask_ratios.to(device).float() - self.mask_ratio).view(B, 1)
+            noise = (noise + shift).clamp(0.0, 1.0)
 
         # Apply crop masking where selected
         if use_crop.any():
@@ -513,6 +521,7 @@ class IJEPAMasking(nn.Module):
         x: torch.Tensor,
         grid_h: int,
         grid_w: int,
+        context_ratios: Optional[torch.Tensor] = None,
     ) -> IJEPAMaskOutput:
         """Apply I-JEPA masking.
 
@@ -607,15 +616,26 @@ class IJEPAMasking(nn.Module):
             context_idx = torch.arange(N, device=device).unsqueeze(0).expand(B, -1)
         else:
             # Subsample context
-            context_ratio = (
-                torch.empty(1, device=device).uniform_(*self.context_scale).item()
-            )
-            n_context = max(1, int(n_available * context_ratio))
+            # Derive a single n_context from the mean ratio so batch shapes stay uniform
+            if context_ratios is not None:
+                base_ratio = context_ratios.float().to(device).mean().item()
+            else:
+                base_ratio = (
+                    torch.empty(1, device=device).uniform_(*self.context_scale).item()
+                )
+            n_context = max(1, int(n_available * base_ratio))
 
-            # Per-sample random subsampling
+            # Per-sample subsampling; when context_ratios provided, bias noise so
+            # samples with higher ratios preferentially keep different patches.
             context_idx_list = []
-            for _ in range(B):
-                perm = torch.randperm(n_available, device=device)[:n_context]
+            for i in range(B):
+                if context_ratios is not None:
+                    noise = torch.rand(n_available, device=device)
+                    shift = context_ratios[i].to(device).float().item() - base_ratio
+                    noise = (noise - shift).clamp(0.0, 1.0)
+                    perm = noise.argsort()[:n_context]
+                else:
+                    perm = torch.randperm(n_available, device=device)[:n_context]
                 ctx_idx = available_idx[perm].sort().values
                 context_idx_list.append(ctx_idx)
 

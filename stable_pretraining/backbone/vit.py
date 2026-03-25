@@ -375,10 +375,15 @@ class MaskedEncoder(nn.Module):
             tokens.append(self.vit.reg_token.expand(B, -1, -1))
         return torch.cat(tokens, dim=1) if tokens else None
 
-    def forward(self, images: torch.Tensor) -> MaskedEncoderOutput:
+    def forward(
+        self, images: torch.Tensor, mask_ratios: Optional[torch.Tensor] = None
+    ) -> MaskedEncoderOutput:
         """Encode images with optional masking.
 
         :param images: Input images (B, C, H, W)
+        :param mask_ratios: Optional per-sample masking ratios [B] for adaptive masking.
+            Passed through to the underlying :class:`PatchMasking` module. Only used
+            when ``self.masking`` is not None and the model is in training mode.
         :return: MaskedEncoderOutput with encoded tokens and mask info
         """
         B = images.shape[0]
@@ -397,7 +402,7 @@ class MaskedEncoder(nn.Module):
 
         # Apply masking (training only)
         if self.training and self.masking is not None:
-            mask_out = self.masking(x, grid_h, grid_w)
+            mask_out = self.masking(x, grid_h, grid_w, mask_ratios=mask_ratios)
             x = mask_out.visible
             mask = mask_out.mask
             ids_keep = mask_out.ids_keep
