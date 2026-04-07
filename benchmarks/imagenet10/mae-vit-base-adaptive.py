@@ -52,7 +52,7 @@ def main():
                 ),
             ),
             batch_size=batch_size,
-            num_workers=(num_workers := 16),
+            num_workers=(num_workers := 8),
             drop_last=True,
             persistent_workers=num_workers > 0,
             shuffle=True,
@@ -71,7 +71,7 @@ def main():
                 ),
             ),
             batch_size=batch_size,
-            num_workers=(num_workers := 16),
+            num_workers=(num_workers := 8),
             persistent_workers=num_workers > 0,
         ),
     )
