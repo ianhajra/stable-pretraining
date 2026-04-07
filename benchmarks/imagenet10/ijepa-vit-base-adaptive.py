@@ -16,10 +16,9 @@ def main():
     sys.path.append(str(Path(__file__).parent.parent))
     from utils import get_data_dir
 
-    num_gpus = 1
-    accelerator = "mps" if torch.backends.mps.is_available() else "cpu"
+    num_gpus = torch.cuda.device_count() or 1
     batch_size = 64
-    max_epochs = 5
+    max_epochs = 600
 
     def ijepa_forward(self, batch, stage):
         output = IJEPA.forward(self, batch["image"], embedding_source="student")
@@ -53,7 +52,7 @@ def main():
                 ),
             ),
             batch_size=batch_size,
-            num_workers=(num_workers := 0),
+            num_workers=(num_workers := 16),
             drop_last=True,
             persistent_workers=num_workers > 0,
             shuffle=True,
@@ -72,7 +71,7 @@ def main():
                 ),
             ),
             batch_size=batch_size,
-            num_workers=(num_workers := 0),
+            num_workers=(num_workers := 16),
             persistent_workers=num_workers > 0,
         ),
     )
@@ -101,10 +100,10 @@ def main():
         },
         "scheduler": {
             "type": "LinearWarmupCosineAnnealing",
-            "peak_step": 1 / max_epochs,
+            "peak_step": 300 / 600,
             "start_factor": 0.01,
             "end_lr": 6e-4 / 10,
-            "total_steps": (len(data.train) // num_gpus) * max_epochs,
+            "total_steps": (len(data.train) // num_gpus) * 600,
         },
         "interval": "step",
     }
@@ -151,7 +150,7 @@ def main():
                 ),
                 filename="ijepa-vitb-adaptive-{epoch:03d}",
                 save_top_k=-1,
-                every_n_epochs=max_epochs,
+                every_n_epochs=300,
                 save_last=True,
             ),
             pl.pytorch.callbacks.LearningRateMonitor(logging_interval="step"),
@@ -162,10 +161,10 @@ def main():
             name="ijepa-vitb-adaptive-inet10",
             log_model=False,
         ),
-        precision="32",
+        precision="16-mixed",
         devices=num_gpus,
-        accelerator=accelerator,
-        strategy="auto",
+        accelerator="gpu",
+        strategy="ddp_find_unused_parameters_true" if num_gpus > 1 else "auto",
     )
 
     manager = spt.Manager(trainer=trainer, module=module, data=data)
