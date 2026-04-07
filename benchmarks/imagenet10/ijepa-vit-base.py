@@ -152,7 +152,7 @@ def main():
             pl.pytorch.callbacks.LearningRateMonitor(logging_interval="step"),
         ],
         logger=pl.pytorch.loggers.WandbLogger(
-            entity="stable-ssl",
+            entity="ianhajra-brown-university",
             project="imagenet10-methods",
             name="ijepa-vitb-inet10",
             log_model=False,
