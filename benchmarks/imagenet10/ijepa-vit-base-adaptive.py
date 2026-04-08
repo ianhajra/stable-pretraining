@@ -107,9 +107,9 @@ def main():
     )
 
     # Replace placeholder with a properly sized per-sample store
-    _target_scale = (0.15, 0.2)
+    _context_scale = (0.85, 1.0)
     module.adaptive_masking = AdaptiveMasking(
-        m_base=(_target_scale[0] + _target_scale[1]) / 2.0,
+        m_base=(_context_scale[0] + _context_scale[1]) / 2.0,
         dataset_size=len(data.train.dataset),
     )
 

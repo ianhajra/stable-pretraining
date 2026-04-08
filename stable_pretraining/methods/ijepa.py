@@ -198,10 +198,10 @@ class IJEPA(Module):
         self.embed_dim = embed_dim
         self._fix_init_weight()
 
-        # Optional adaptive masking — m_base derived from mean target_scale.
+        # Optional adaptive masking — m_base derived from mean context_scale.
         # The caller should replace this with a properly sized AdaptiveMasking
         # (or AdaptiveMaskingEMA) using the real dataset_size before training.
-        _m_base = (target_scale[0] + target_scale[1]) / 2.0
+        _m_base = (context_scale[0] + context_scale[1]) / 2.0
         self.adaptive_masking: AdaptiveMasking | None = (
             AdaptiveMasking(m_base=_m_base, dataset_size=1)
             if use_adaptive_masking

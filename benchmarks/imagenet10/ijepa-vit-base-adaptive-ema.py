@@ -34,7 +34,8 @@ def main():
     # EMA decay of 0.9 gives an effective window of ~10 epochs per sample
     # (equal weighting approximation: 1 - 1/10 = 0.9)
     _target_scale = (0.15, 0.2)
-    m_base = (_target_scale[0] + _target_scale[1]) / 2.0
+    _context_scale = (0.85, 1.0)
+    m_base = (_context_scale[0] + _context_scale[1]) / 2.0
 
     def ijepa_forward(self, batch, stage):
         output = IJEPA.forward(
@@ -111,7 +112,7 @@ def main():
         num_targets=4,
         target_scale=_target_scale,
         target_aspect_ratio=(0.75, 1.5),
-        context_scale=(0.85, 1.0),
+        context_scale=_context_scale,
         ema_decay_start=0.996,
         ema_decay_end=1.0,
         pretrained=False,
