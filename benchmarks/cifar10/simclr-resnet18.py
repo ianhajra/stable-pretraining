@@ -8,6 +8,8 @@ from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import LearningRateMonitor
 from torch import nn
 
+import types
+
 import stable_pretraining as spt
 from stable_pretraining import forward
 from stable_pretraining.data import transforms
@@ -114,6 +116,25 @@ module = spt.Module(
     },
 )
 
+_orig_forward = module.forward
+
+
+def _forward_with_views(self, batch, stage):
+    out = _orig_forward(batch, stage)
+    if self.training and "embedding" in out:
+        if "views" in batch:
+            n = batch["views"][0]["image"].shape[0]
+        elif "image" not in batch:
+            n = next(iter(batch.values()))["image"].shape[0]
+        else:
+            n = out["embedding"].shape[0] // 2
+        out["embedding_view1"] = out["embedding"][:n]
+        out["embedding_view2"] = out["embedding"][n : 2 * n]
+    return out
+
+
+module.forward = types.MethodType(_forward_with_views, module)
+
 linear_probe = spt.callbacks.OnlineProbe(
     module,
     name="linear_probe",
@@ -137,6 +158,21 @@ knn_probe = spt.callbacks.OnlineKNN(
     k=10,
 )
 
+rankme = spt.callbacks.RankMe(
+    name="rankme",
+    target="embedding",
+    queue_length=8192,
+    target_shape=512,
+)
+
+rerankme = spt.callbacks.ReRankMe(
+    name="rerankme",
+    target_view1="embedding_view1",
+    target_view2="embedding_view2",
+    queue_length=8192,
+    target_shape=512,
+)
+
 wandb_logger = WandbLogger(
     entity="stable-ssl",
     project="cifar10-simclr",
@@ -149,7 +185,7 @@ lr_monitor = LearningRateMonitor(logging_interval="step")
 trainer = pl.Trainer(
     max_epochs=1000,
     num_sanity_val_steps=0,
-    callbacks=[knn_probe, linear_probe, lr_monitor],
+    callbacks=[knn_probe, linear_probe, lr_monitor, rankme, rerankme],
     precision="16-mixed",
     logger=wandb_logger,
     enable_checkpointing=False,
