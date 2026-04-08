@@ -174,8 +174,8 @@ rerankme = spt.callbacks.ReRankMe(
 )
 
 wandb_logger = WandbLogger(
-    entity="stable-ssl",
-    project="cifar10-barlow",
+    entity="ianhajra-brown-university",
+    project="rerankme",
     name="barlow-resnet18",
     log_model=False,
 )
