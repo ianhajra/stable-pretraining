@@ -34,6 +34,8 @@ class LogUnusedParametersOnce(Callback):
                 continue
             if not p.is_leaf:
                 continue
+            if isinstance(p, torch.nn.parameter.UninitializedParameter):
+                continue
 
             self._used_flags[p] = False
 

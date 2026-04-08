@@ -31,8 +31,8 @@ def _get_views_list(batch: dict):
     if "views" in batch:
         return batch["views"]
     elif "image" not in batch:
-        # Dict of named views - convert to list
-        return list(batch.values())
+        # Dict of named views - convert to list, ignoring non-dict metadata (e.g. batch_idx)
+        return [v for v in batch.values() if isinstance(v, dict)]
     else:
         # Single view, return None as sentinel
         return None
