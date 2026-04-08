@@ -7,10 +7,10 @@ normalisation).
 
 The adjustment formula for sample *i* is::
 
-    m_i = clip(m_base - (m_base * (1 - m_base) / Var(e)) * (e_i - mean(e)), 0.1, 0.9)
+    m_i = clip(m_base - (m_base * (1 - m_base) / Std(e)) * (e_i - mean(e)), 0.85, 1.0)
 
 where ``e`` is the full set of per-sample losses committed at the end of the
-*previous* epoch and ``mean`` / ``Var`` are computed across all dataset samples
+*previous* epoch and ``mean`` / ``Std`` are computed across all dataset samples
 seen so far.
 
 :class:`AdaptiveMasking`
@@ -66,23 +66,23 @@ def _compute_ratios(
         May contain NaN for samples never seen before.
     :param all_losses: Full per-sample loss buffer for the dataset, shape
         ``[N]``, may contain NaN.
-    :return: Ratios, shape ``[B]``, clipped to ``[0.1, 0.9]``.
+    :return: Ratios, shape ``[B]``, clipped to ``[0.85, 1.0]``.
     """
     valid = all_losses[~torch.isnan(all_losses)]
     if valid.numel() == 0:
         return torch.full((e_i.shape[0],), m_base)
 
     e_mean = valid.mean()
-    e_var = valid.var(unbiased=False)
+    e_std = valid.std(unbiased=False)
 
-    if e_var < 1e-8:
+    if e_std < 1e-8:
         return torch.full((e_i.shape[0],), m_base, device=all_losses.device)
 
-    scale = m_base * (1.0 - m_base) / e_var
+    scale = m_base * (1.0 - m_base) / e_std
     ratios = m_base - scale * (e_i - e_mean)
     # Unseen samples fall back to m_base
     ratios = torch.where(torch.isnan(e_i), torch.full_like(ratios, m_base), ratios)
-    return ratios.clamp(0.1, 0.9)
+    return ratios.clamp(0.85, 1.0)
 
 
 class AdaptiveMasking:
@@ -162,7 +162,7 @@ class AdaptiveMasking:
         Returns uniform ``m_base`` during warmup or for samples not yet seen.
 
         :param indices: Dataset indices for the upcoming batch, shape ``[B]``.
-        :return: Masking ratios, shape ``[B]``, values in ``[0.1, 0.9]``.
+        :return: Masking ratios, shape ``[B]``, values in ``[0.85, 1.0]``.
         """
         if self._current_epoch < self.warmup_epochs:
             return torch.full((indices.shape[0],), self.m_base)
@@ -256,7 +256,7 @@ class AdaptiveMaskingEMA:
         Returns uniform ``m_base`` during warmup or for samples not yet seen.
 
         :param indices: Dataset indices for the upcoming batch, shape ``[B]``.
-        :return: Masking ratios, shape ``[B]``, values in ``[0.1, 0.9]``.
+        :return: Masking ratios, shape ``[B]``, values in ``[0.85, 1.0]``.
         """
         if self._current_epoch < self.warmup_epochs:
             return torch.full((indices.shape[0],), self.m_base)
