@@ -10,6 +10,17 @@ import torchmetrics
 import stable_pretraining as spt
 from stable_pretraining.data import transforms
 from stable_pretraining.methods.ijepa import IJEPA
+from stable_pretraining.methods.adaptive_masking import AdaptiveMasking
+
+
+class AdvanceEpochCallback(pl.Callback):
+    """Commits per-sample losses at the end of each train epoch."""
+
+    def __init__(self, masking_module: AdaptiveMasking) -> None:
+        self.masking_module = masking_module
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        self.masking_module.advance_epoch()
 
 
 def main():
@@ -21,7 +32,12 @@ def main():
     max_epochs = 600
 
     def ijepa_forward(self, batch, stage):
-        output = IJEPA.forward(self, batch["image"], embedding_source="student")
+        output = IJEPA.forward(
+            self,
+            batch["image"],
+            embedding_source="student",
+            indices=batch["sample_idx"],
+        )
         embedding = output.embedding.mean(dim=1)
         if self.training:
             embedding = embedding.detach()
@@ -90,6 +106,13 @@ def main():
         use_adaptive_masking=True,
     )
 
+    # Replace placeholder with a properly sized per-sample store
+    _target_scale = (0.15, 0.2)
+    module.adaptive_masking = AdaptiveMasking(
+        m_base=(_target_scale[0] + _target_scale[1]) / 2.0,
+        dataset_size=len(data.train.dataset),
+    )
+
     module.forward = types.MethodType(ijepa_forward, module)
     module.optim = {
         "optimizer": {
@@ -112,6 +135,7 @@ def main():
         max_epochs=max_epochs,
         num_sanity_val_steps=0,
         callbacks=[
+            AdvanceEpochCallback(module.adaptive_masking),
             spt.callbacks.TeacherStudentCallback(
                 update_frequency=1,
                 update_after_backward=True,

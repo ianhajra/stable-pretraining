@@ -198,10 +198,12 @@ class IJEPA(Module):
         self.embed_dim = embed_dim
         self._fix_init_weight()
 
-        # Optional adaptive masking — m_base derived from mean target_scale
+        # Optional adaptive masking — m_base derived from mean target_scale.
+        # The caller should replace this with a properly sized AdaptiveMasking
+        # (or AdaptiveMaskingEMA) using the real dataset_size before training.
         _m_base = (target_scale[0] + target_scale[1]) / 2.0
         self.adaptive_masking: AdaptiveMasking | None = (
-            AdaptiveMasking(m_base=_m_base, batch_size=0)
+            AdaptiveMasking(m_base=_m_base, dataset_size=1)
             if use_adaptive_masking
             else None
         )
@@ -233,7 +235,10 @@ class IJEPA(Module):
         return encoder.vit.norm(x)
 
     def forward(
-        self, images: torch.Tensor, embedding_source: str = "teacher"
+        self,
+        images: torch.Tensor,
+        embedding_source: str = "teacher",
+        indices: torch.Tensor | None = None,
     ) -> IJEPAOutput:
         """Forward pass.
 
@@ -265,8 +270,8 @@ class IJEPA(Module):
         teacher_patches = self.encoder.teacher.patch_embed(images)
 
         # Apply masking (returns all patches as context in eval mode)
-        if self.training and self.adaptive_masking is not None:
-            context_ratios = self.adaptive_masking.get_ratios(B).to(images.device)
+        if self.training and self.adaptive_masking is not None and indices is not None:
+            context_ratios = self.adaptive_masking.get_ratios(indices).to(images.device)
             mask_out = self.masking(
                 student_patches, grid_h, grid_w, context_ratios=context_ratios
             )
@@ -333,11 +338,11 @@ class IJEPA(Module):
             )
 
             loss = F.smooth_l1_loss(predictions, targets, beta=1.0)
-            if self.adaptive_masking is not None:
+            if self.adaptive_masking is not None and indices is not None:
                 per_sample = F.smooth_l1_loss(
                     predictions, targets, beta=1.0, reduction="none"
                 ).mean(dim=(1, 2))
-                self.adaptive_masking.update(per_sample)
+                self.adaptive_masking.update(per_sample, indices.cpu())
         else:
             # Eval: encode all patches through student
             with torch.no_grad():

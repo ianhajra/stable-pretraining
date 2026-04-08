@@ -151,14 +151,18 @@ class MAE(Module):
             patch_normalize=norm_pix_loss,
         )
 
-        # Optional adaptive masking
+        # Optional adaptive masking.
+        # The caller should replace this with a properly sized AdaptiveMasking
+        # (or AdaptiveMaskingEMA) using the real dataset_size before training.
         self.adaptive_masking: AdaptiveMasking | None = (
-            AdaptiveMasking(m_base=self.masking.mask_ratio, batch_size=0)
+            AdaptiveMasking(m_base=self.masking.mask_ratio, dataset_size=1)
             if use_adaptive_masking
             else None
         )
 
-    def forward(self, images: torch.Tensor) -> MAEOutput:
+    def forward(
+        self, images: torch.Tensor, indices: torch.Tensor | None = None
+    ) -> MAEOutput:
         """Forward pass.
 
         Training: masks patches, encodes visible, decodes all, loss on masked.
@@ -167,10 +171,8 @@ class MAE(Module):
         :param images: Input images [B, C, H, W]
         :return: MAEOutput with loss and reconstructions
         """
-        if self.training and self.adaptive_masking is not None:
-            mask_ratios = self.adaptive_masking.get_ratios(images.shape[0]).to(
-                images.device
-            )
+        if self.training and self.adaptive_masking is not None and indices is not None:
+            mask_ratios = self.adaptive_masking.get_ratios(indices).to(images.device)
             enc_out = self.encoder(images, mask_ratios=mask_ratios)
         else:
             enc_out = self.encoder(images)
@@ -187,9 +189,9 @@ class MAE(Module):
         if self.training:
             imgs = images.to(predictions.dtype)
             loss = self.loss_fn(predictions, imgs, enc_out.mask)
-            if self.adaptive_masking is not None:
+            if self.adaptive_masking is not None and indices is not None:
                 per_sample = self.loss_fn.per_sample(predictions, imgs, enc_out.mask)
-                self.adaptive_masking.update(per_sample)
+                self.adaptive_masking.update(per_sample, indices.cpu())
             num_masked = int(enc_out.mask.sum(dim=1)[0].item())
         else:
             loss = torch.tensor(0.0, device=images.device)

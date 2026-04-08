@@ -10,6 +10,17 @@ import torchmetrics
 import stable_pretraining as spt
 from stable_pretraining.data import transforms
 from stable_pretraining.methods.mae import MAE
+from stable_pretraining.methods.adaptive_masking import AdaptiveMasking
+
+
+class AdvanceEpochCallback(pl.Callback):
+    """Commits per-sample losses at the end of each train epoch."""
+
+    def __init__(self, masking_module: AdaptiveMasking) -> None:
+        self.masking_module = masking_module
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        self.masking_module.advance_epoch()
 
 
 def main():
@@ -21,7 +32,7 @@ def main():
     max_epochs = 600
 
     def mae_forward(self, batch, stage):
-        output = MAE.forward(self, batch["image"])
+        output = MAE.forward(self, batch["image"], indices=batch["sample_idx"])
         with torch.no_grad():
             features = self.encoder.forward_features(batch["image"])
 
@@ -89,6 +100,12 @@ def main():
         use_adaptive_masking=True,
     )
 
+    # Replace placeholder with a properly sized per-sample store
+    module.adaptive_masking = AdaptiveMasking(
+        m_base=0.75,
+        dataset_size=len(data.train.dataset),
+    )
+
     module.forward = types.MethodType(mae_forward, module)
     module.optim = {
         "optimizer": {
@@ -111,6 +128,7 @@ def main():
         max_epochs=max_epochs,
         num_sanity_val_steps=0,
         callbacks=[
+            AdvanceEpochCallback(module.adaptive_masking),
             spt.callbacks.OnlineProbe(
                 module,
                 name="linear_probe",

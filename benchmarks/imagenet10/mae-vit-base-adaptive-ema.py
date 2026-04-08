@@ -31,23 +31,12 @@ def main():
     batch_size = 64
     max_epochs = 600
 
-    # EMA decay tuned for a ~10-epoch effective window.
-    # Imagenette train: ~9469 samples, batch_size=64, drop_last -> 147 steps/epoch.
-    # decay = 1 - 1 / (10 * steps_per_epoch)
-    steps_per_epoch = 9469 // batch_size  # 147
-    ema_decay = 1.0 - 1.0 / (10 * steps_per_epoch)
-
+    # EMA decay of 0.9 gives an effective window of ~10 epochs per sample
+    # (equal weighting approximation: 1 - 1/10 = 0.9)
     mask_ratio = 0.75
 
-    adaptive_masking = AdaptiveMaskingEMA(
-        m_base=mask_ratio,
-        batch_size=batch_size,
-        ema_decay=ema_decay,
-        warmup_epochs=50,
-    )
-
     def mae_forward(self, batch, stage):
-        output = MAE.forward(self, batch["image"])
+        output = MAE.forward(self, batch["image"], indices=batch["sample_idx"])
         with torch.no_grad():
             features = self.encoder.forward_features(batch["image"])
 
@@ -100,6 +89,13 @@ def main():
             num_workers=(num_workers := 6),
             persistent_workers=num_workers > 0,
         ),
+    )
+
+    adaptive_masking = AdaptiveMaskingEMA(
+        m_base=mask_ratio,
+        dataset_size=len(data.train.dataset),
+        ema_decay=0.9,
+        warmup_epochs=50,
     )
 
     module = MAE(
