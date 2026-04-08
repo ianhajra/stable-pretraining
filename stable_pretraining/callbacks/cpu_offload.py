@@ -225,11 +225,16 @@ class CPUOffloadCallback(Callback):
         logger.info("CPUOffloadCallback: Training started")
 
         if trainer.global_rank == 0:
-            # Count total parameters
-            total_params = sum(p.numel() for p in pl_module.parameters())
-            trainable_params = sum(
-                p.numel() for p in pl_module.parameters() if p.requires_grad
-            )
+            # Count total parameters, skipping uninitialized (lazy) parameters
+            from torch.nn.parameter import UninitializedParameter
+
+            initialized = [
+                p
+                for p in pl_module.parameters()
+                if not isinstance(p, UninitializedParameter)
+            ]
+            total_params = sum(p.numel() for p in initialized)
+            trainable_params = sum(p.numel() for p in initialized if p.requires_grad)
 
             logger.info("Model statistics:")
             logger.info(f"  - Total parameters: {total_params:,}")
