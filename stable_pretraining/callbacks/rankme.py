@@ -20,10 +20,60 @@ def _rankme_score(embeddings: torch.Tensor) -> torch.Tensor:
         Scalar RankMe score.
     """
     embeddings = embeddings - embeddings.mean(dim=0)
-    s = torch.linalg.svdvals(embeddings)
-    p = (s / torch.sum(s, axis=0)) + 1e-5
+    s = torch.linalg.svdvals(embeddings) + 1e-8
+    p = s / s.sum()
     entropy = -torch.sum(p * torch.log(p))
     return torch.exp(entropy)
+
+
+def _rerankme_score(
+    z1: torch.Tensor, z2: torch.Tensor, epsilon: float = 1e-8
+) -> torch.Tensor:
+    """Compute the ReRankMe score via spectral ratio entropy.
+
+    Measures how much each intrinsic direction of Z1 changes under augmentation,
+    after removing dependence on global scale and anisotropy via spectral ratio.
+
+    Args:
+        z1: Embedding matrix of shape (N, D) for the first augmented view.
+        z2: Embedding matrix of shape (N, D) for the second augmented view.
+        epsilon: Small constant for numerical stability.
+
+    Returns:
+        Scalar ReRankMe score in [0, 1]. Higher means more augmentation-invariant.
+    """
+    if z1.shape != z2.shape:
+        raise ValueError(
+            f"z1 and z2 must have the same shape, got {z1.shape} vs {z2.shape}"
+        )
+
+    z1 = z1 - z1.mean(dim=0)
+    delta_z = z1 - z2
+    delta_z = delta_z - delta_z.mean(dim=0)
+
+    s1 = torch.linalg.svdvals(z1)
+    s_delta = torch.linalg.svdvals(delta_z)
+
+    # Align lengths (truncate to the shorter of the two)
+    d = min(s1.shape[0], s_delta.shape[0])
+    s1 = s1[:d]
+    s_delta = s_delta[:d]
+
+    # Spectral ratio: how much each direction changes relative to Z1
+    r = s_delta / (s1 + epsilon)
+
+    # Normalize into a probability distribution
+    r_sum = r.sum()
+    p = r / (r_sum + epsilon)
+
+    # Entropy of the spectral ratio distribution
+    entropy = -torch.sum(p * torch.log(p + epsilon))
+
+    # Normalize by maximum entropy
+    h_max = torch.log(torch.tensor(d, dtype=torch.float32, device=z1.device))
+    rerankme = 1.0 - (entropy / (h_max + epsilon))
+
+    return rerankme
 
 
 class RankMe(Callback):
@@ -117,16 +167,12 @@ class RankMe(Callback):
 
 
 class ReRankMe(Callback):
-    """ReRankMe monitor: RankMe corrected for augmentation invariance.
+    """ReRankMe monitor: augmentation-invariance score via spectral ratio entropy.
 
-    Computes RankMe(Z1)^2 / (RankMe(ΔZ) + ε), where ΔZ = Z_1 - Z_2 are the
-    embedding matrices of two independently augmented views of the same N images.
-    A good representation has high RankMe (rich structure) but low RankMe(ΔZ)
-    (invariant to augmentation noise), yielding a high ReRankMe score.
-    This formulation is always positive.
-
-    All computation — SVD, normalization, entropy — is identical to RankMe.
-    The only change is the input matrix for the correction term.
+    Computes ReRankMe using spectral ratio entropy: measures how much each
+    intrinsic direction of Z1 changes under augmentation, normalized by the
+    magnitude of Z1 in that direction. A score near 1 indicates strong
+    augmentation invariance; near 0 indicates high sensitivity.
 
     Args:
         name: Unique name for this callback instance
@@ -237,10 +283,5 @@ class ReRankMe(Callback):
 
         if trainer.global_rank == 0:
             with torch.no_grad():
-                delta_z = z1 - z2
-                rankme_z1 = _rankme_score(z1)
-                rankme_delta = _rankme_score(delta_z)
-                rerankme = rankme_z1 * rankme_z1 / (rankme_delta + self.epsilon)
+                rerankme = _rerankme_score(z1, z2, self.epsilon)
                 pl_module.log(self.name, rerankme.item())
-                pl_module.log(f"{self.name}/rankme_z1", rankme_z1.item())
-                pl_module.log(f"{self.name}/rankme_delta", rankme_delta.item())
