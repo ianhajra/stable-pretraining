@@ -119,10 +119,11 @@ class RankMe(Callback):
 class ReRankMe(Callback):
     """ReRankMe monitor: RankMe corrected for augmentation invariance.
 
-    Computes RankMe(Z_1) - λ · RankMe(ΔZ), where ΔZ = Z_1 - Z_2 are the
+    Computes RankMe(Z1)^2 / (RankMe(ΔZ) + ε), where ΔZ = Z_1 - Z_2 are the
     embedding matrices of two independently augmented views of the same N images.
     A good representation has high RankMe (rich structure) but low RankMe(ΔZ)
     (invariant to augmentation noise), yielding a high ReRankMe score.
+    This formulation is always positive.
 
     All computation — SVD, normalization, entropy — is identical to RankMe.
     The only change is the input matrix for the correction term.
@@ -133,7 +134,8 @@ class ReRankMe(Callback):
         target_view2: Key in batch dict for the second augmented view embeddings
         queue_length: Required queue length (same for both views)
         target_shape: Shape of the embeddings (e.g., 768 for 768-dim features)
-        lam: Weight of the augmentation-invariance penalty (default: 1.0)
+        lam: Weight of the augmentation-invariance penalty (default: 1.0, unused)
+        epsilon: Small constant added to denominator for numerical stability (default: 1e-8)
     """
 
     def __init__(
@@ -144,6 +146,7 @@ class ReRankMe(Callback):
         queue_length: int,
         target_shape: Union[int, Iterable[int]],
         lam: float = 1.0,
+        epsilon: float = 1e-8,
     ) -> None:
         super().__init__()
 
@@ -159,6 +162,7 @@ class ReRankMe(Callback):
         self.queue_length = queue_length
         self.target_shape = target_shape
         self.lam = lam
+        self.epsilon = epsilon
 
         self._queue_view1 = None
         self._queue_view2 = None
@@ -236,7 +240,7 @@ class ReRankMe(Callback):
                 delta_z = z1 - z2
                 rankme_z1 = _rankme_score(z1)
                 rankme_delta = _rankme_score(delta_z)
-                rerankme = rankme_z1 - self.lam * rankme_delta
+                rerankme = rankme_z1 * rankme_z1 / (rankme_delta + self.epsilon)
                 pl_module.log(self.name, rerankme.item())
                 pl_module.log(f"{self.name}/rankme_z1", rankme_z1.item())
                 pl_module.log(f"{self.name}/rankme_delta", rankme_delta.item())
