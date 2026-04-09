@@ -40,7 +40,7 @@ def _rerankme_score(
         epsilon: Small constant for numerical stability.
 
     Returns:
-        Scalar ReRankMe score in [0, 1]. Higher means more augmentation-invariant.
+        Scalar ReRankMe score. Higher means more augmentation-invariant.
     """
     if z1.shape != z2.shape:
         raise ValueError(
@@ -48,16 +48,17 @@ def _rerankme_score(
         )
 
     z1 = z1 - z1.mean(dim=0)
+    z2 = z2 - z2.mean(dim=0)
     delta_z = z1 - z2
     delta_z = delta_z - delta_z.mean(dim=0)
 
-    s1 = torch.linalg.svdvals(z1)
-    s_delta = torch.linalg.svdvals(delta_z)
+    # SVD of z1 to get its principal directions (right singular vectors)
+    _, s1, Vh1 = torch.linalg.svd(z1, full_matrices=False)
 
-    # Align lengths (truncate to the shorter of the two)
-    d = min(s1.shape[0], s_delta.shape[0])
-    s1 = s1[:d]
-    s_delta = s_delta[:d]
+    # Project delta_z onto z1's principal directions before computing singular values,
+    # so that s_delta[i] and s1[i] both refer to the same feature-space direction.
+    delta_proj = delta_z @ Vh1.T  # (N, K)
+    s_delta = torch.linalg.svdvals(delta_proj)
 
     # Spectral ratio: how much each direction changes relative to Z1
     r = s_delta / (s1 + epsilon)
@@ -69,11 +70,7 @@ def _rerankme_score(
     # Entropy of the spectral ratio distribution
     entropy = -torch.sum(p * torch.log(p + epsilon))
 
-    # Normalize by maximum entropy
-    h_max = torch.log(torch.tensor(d, dtype=torch.float32, device=z1.device))
-    rerankme = 1.0 - (entropy / (h_max + epsilon))
-
-    return rerankme
+    return entropy / (1.0 + r.mean())
 
 
 class RankMe(Callback):
@@ -171,8 +168,7 @@ class ReRankMe(Callback):
 
     Computes ReRankMe using spectral ratio entropy: measures how much each
     intrinsic direction of Z1 changes under augmentation, normalized by the
-    magnitude of Z1 in that direction. A score near 1 indicates strong
-    augmentation invariance; near 0 indicates high sensitivity.
+    magnitude of Z1 in that direction.
 
     Args:
         name: Unique name for this callback instance
@@ -180,7 +176,6 @@ class ReRankMe(Callback):
         target_view2: Key in batch dict for the second augmented view embeddings
         queue_length: Required queue length (same for both views)
         target_shape: Shape of the embeddings (e.g., 768 for 768-dim features)
-        lam: Weight of the augmentation-invariance penalty (default: 1.0, unused)
         epsilon: Small constant added to denominator for numerical stability (default: 1e-8)
     """
 
@@ -191,7 +186,6 @@ class ReRankMe(Callback):
         target_view2: str,
         queue_length: int,
         target_shape: Union[int, Iterable[int]],
-        lam: float = 1.0,
         epsilon: float = 1e-8,
     ) -> None:
         super().__init__()
@@ -207,7 +201,6 @@ class ReRankMe(Callback):
         self.target_view2 = target_view2
         self.queue_length = queue_length
         self.target_shape = target_shape
-        self.lam = lam
         self.epsilon = epsilon
 
         self._queue_view1 = None
