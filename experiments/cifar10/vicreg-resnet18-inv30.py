@@ -201,7 +201,7 @@ checkpoint_callback = ModelCheckpoint(
 )
 
 trainer = pl.Trainer(
-    max_epochs=1000,
+    max_epochs=300,
     num_sanity_val_steps=0,
     callbacks=[
         knn_probe,
