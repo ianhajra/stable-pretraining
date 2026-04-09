@@ -5,6 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
+#SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 
 mkdir -p /oscar/scratch/"$USER"/rerankme/logs
