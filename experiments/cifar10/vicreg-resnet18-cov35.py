@@ -1,12 +1,13 @@
-"""SimCLR training on CIFAR10."""
+"""VICReg training on CIFAR-10."""
 
 import lightning as pl
 import torch
+import torch.nn as nn
 import torchmetrics
 import torchvision
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import LearningRateMonitor
-from torch import nn
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from pathlib import Path
 
 import types
 
@@ -15,16 +16,18 @@ from stable_pretraining import forward
 from stable_pretraining.callbacks.cifar10c import CIFAR10CCallback
 from stable_pretraining.data import transforms
 import sys
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent / "benchmarks"))
 from utils import get_data_dir
 
-simclr_transform = transforms.MultiViewTransform(
+RUN_NAME = "vicreg-resnet18-cov35"
+
+
+vicreg_transform = transforms.MultiViewTransform(
     [
         transforms.Compose(
             transforms.RGB(),
-            transforms.RandomResizedCrop((32, 32)),
+            transforms.RandomResizedCrop((32, 32), scale=(0.08, 1.0)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
@@ -34,7 +37,7 @@ simclr_transform = transforms.MultiViewTransform(
         ),
         transforms.Compose(
             transforms.RGB(),
-            transforms.RandomResizedCrop((32, 32)),
+            transforms.RandomResizedCrop((32, 32), scale=(0.08, 1.0)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
@@ -60,7 +63,7 @@ cifar_val = torchvision.datasets.CIFAR10(root=str(data_dir), train=False, downlo
 train_dataset = spt.data.FromTorchDataset(
     cifar_train,
     names=["image", "label"],
-    transform=simclr_transform,
+    transform=vicreg_transform,
 )
 val_dataset = spt.data.FromTorchDataset(
     cifar_val,
@@ -68,16 +71,17 @@ val_dataset = spt.data.FromTorchDataset(
     transform=val_transform,
 )
 
+batch_size = 256
 train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
-    batch_size=256,
+    batch_size=batch_size,
     num_workers=4,
     drop_last=True,
     shuffle=True,
 )
 val_dataloader = torch.utils.data.DataLoader(
     dataset=val_dataset,
-    batch_size=256,
+    batch_size=batch_size,
     num_workers=2,
 )
 
@@ -96,14 +100,18 @@ projector = nn.Sequential(
     nn.Linear(2048, 2048),
     nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
-    nn.Linear(2048, 256),
+    nn.Linear(2048, 2048),
 )
 
 module = spt.Module(
     backbone=backbone,
     projector=projector,
-    forward=forward.simclr_forward,
-    simclr_loss=spt.losses.NTXEntLoss(temperature=0.5),
+    forward=forward.vicreg_forward,
+    vicreg_loss=spt.losses.VICRegLoss(
+        sim_coeff=25.0,
+        std_coeff=25.0,
+        cov_coeff=35.0,
+    ),
     optim={
         "optimizer": {
             "type": "LARS",
@@ -177,12 +185,20 @@ rerankme = spt.callbacks.ReRankMe(
 wandb_logger = WandbLogger(
     entity="ianhajra-brown-university",
     project="rerankme",
-    name="simclr-resnet18",
+    name=RUN_NAME,
     log_model=False,
+    save_dir=str(Path.home() / "scratch" / "rerankme" / "logs"),
 )
 
-# Create learning rate monitor
 lr_monitor = LearningRateMonitor(logging_interval="step")
+
+checkpoint_callback = ModelCheckpoint(
+    dirpath=str(Path.home() / "scratch" / "rerankme" / "checkpoints" / RUN_NAME),
+    filename="{epoch:03d}",
+    save_top_k=-1,
+    every_n_epochs=25,
+    save_last=True,
+)
 
 trainer = pl.Trainer(
     max_epochs=1000,
@@ -193,11 +209,11 @@ trainer = pl.Trainer(
         lr_monitor,
         rankme,
         rerankme,
-        CIFAR10CCallback(),
+        checkpoint_callback,
+        CIFAR10CCallback(every_n_epochs=25),
     ],
     precision="16-mixed",
     logger=wandb_logger,
-    enable_checkpointing=False,
 )
 
 manager = spt.Manager(trainer=trainer, module=module, data=data)

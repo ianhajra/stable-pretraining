@@ -17,6 +17,7 @@ from .clip_zero_shot import CLIPZeroShot
 from .embedding_cache import EmbeddingCache
 from .earlystop import EpochMilestones
 from .wd_schedule import WeightDecayUpdater
+from .cifar10c import CIFAR10CCallback
 from .cleanup import CleanUpCallback
 from .env_info import EnvironmentDumpCallback
 from .cpu_offload import CPUOffloadCallback
@@ -48,6 +49,7 @@ __all__ = [
     CleanUpCallback,
     StrictCheckpointCallback,
     EnvironmentDumpCallback,
+    CIFAR10CCallback,
     ModuleRegistryCallback,
     LogUnusedParametersOnce,
 ]
