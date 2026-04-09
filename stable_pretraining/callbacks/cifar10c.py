@@ -176,13 +176,14 @@ class CIFAR10CCallback(Callback):
         loss_fn = nn.CrossEntropyLoss()
         n = X.shape[0]
         probe.train()
-        for _ in range(self.probe_epochs):
-            perm = torch.randperm(n, device=device)
-            for start in range(0, n, self.batch_size):
-                idx = perm[start : start + self.batch_size]
-                optimiser.zero_grad()
-                loss_fn(probe(X[idx]), y[idx]).backward()
-                optimiser.step()
+        with torch.enable_grad():
+            for _ in range(self.probe_epochs):
+                perm = torch.randperm(n, device=device)
+                for start in range(0, n, self.batch_size):
+                    idx = perm[start : start + self.batch_size]
+                    optimiser.zero_grad()
+                    loss_fn(probe(X[idx]), y[idx]).backward()
+                    optimiser.step()
         probe.eval()
         return probe
 
