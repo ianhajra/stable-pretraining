@@ -8,6 +8,10 @@
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 
+module load anaconda3/2023.09-0-aqbc
+# shellcheck source=/dev/null
+source activate spt
+
 mkdir -p /oscar/scratch/"$USER"/rerankme/logs
 mkdir -p /oscar/scratch/"$USER"/rerankme/checkpoints/vicreg-resnet18-inv50
 
