@@ -189,7 +189,7 @@ wandb_logger = WandbLogger(
 )
 
 trainer = pl.Trainer(
-    max_epochs=1000,
+    max_epochs=400,
     num_sanity_val_steps=0,
     callbacks=[linear_probe, knn_probe, rankme, rerankme],
     precision="16-mixed",

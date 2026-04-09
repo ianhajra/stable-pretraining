@@ -176,7 +176,7 @@ wandb_logger = WandbLogger(
 lr_monitor = LearningRateMonitor(logging_interval="step")
 
 trainer = pl.Trainer(
-    max_epochs=1000,
+    max_epochs=400,
     num_sanity_val_steps=0,
     callbacks=[knn_probe, linear_probe, lr_monitor, rankme, rerankme],
     precision="16-mixed",
