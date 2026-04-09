@@ -164,14 +164,14 @@ train_dataloader = torch.utils.data.DataLoader(
     # Updated to 8 views to match the multi-crop transform
     sampler=spt.data.sampler.RepeatedRandomSampler(train_dataset, n_views=8),
     batch_size=256,
-    num_workers=8,
+    num_workers=4,
     drop_last=True,
 )
 
 val_dataloader = torch.utils.data.DataLoader(
     dataset=val_dataset,
     batch_size=256,
-    num_workers=10,
+    num_workers=2,
 )
 
 data = spt.data.DataModule(train=train_dataloader, val=val_dataloader)

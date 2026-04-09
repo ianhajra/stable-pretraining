@@ -70,14 +70,14 @@ val_dataset = spt.data.FromTorchDataset(
 train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
     batch_size=256,
-    num_workers=8,
+    num_workers=4,
     drop_last=True,
     shuffle=True,
 )
 val_dataloader = torch.utils.data.DataLoader(
     dataset=val_dataset,
     batch_size=256,
-    num_workers=10,
+    num_workers=2,
 )
 
 data = spt.data.DataModule(train=train_dataloader, val=val_dataloader)
