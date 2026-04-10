@@ -101,6 +101,12 @@ def main() -> None:
         default=None,
         help="Directory to write CSVs (default: ~/scratch/rerankme/logs)",
     )
+    parser.add_argument(
+        "--sweeps",
+        nargs="+",
+        default=None,
+        help="Sweep names to export (e.g. simclr-tau vicreg-cov). Default: all.",
+    )
     args = parser.parse_args()
 
     entity = args.entity
@@ -115,7 +121,7 @@ def main() -> None:
         sys.exit(1)
 
     log_dir = Path(args.log_dir).expanduser() if args.log_dir else DEFAULT_LOG_DIR
-    export_runs(entity, project, log_dir)
+    export_runs(entity, project, log_dir, sweeps=args.sweeps)
 
 
 if __name__ == "__main__":
