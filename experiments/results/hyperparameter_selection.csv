@@ -1,0 +1,13 @@
+sweep,selection_metric,selection_epoch,selected_run,final_linear_probe,oracle_linear_probe,final_knn_probe,oracle_knn_probe,final_cifar10c,oracle_cifar10c
+simclr-tau,rankme,25,simclr-resnet18-tau0.05,,,,,,
+simclr-tau,rankme,125,simclr-resnet18-tau0.05,,,,,,
+simclr-tau,rankme,150,simclr-resnet18-tau0.05,,,,,,
+simclr-tau,rankme,175,simclr-resnet18-tau0.05,,,,,,
+simclr-tau,rankme,250,simclr-resnet18-tau0.05,,,,,,
+simclr-tau,rankme,275,simclr-resnet18-tau0.05,,,,,,
+simclr-tau,rerankme,25,simclr-resnet18-tau0.15,,,,,,
+simclr-tau,rerankme,125,simclr-resnet18-tau0.15,,,,,,
+simclr-tau,rerankme,150,simclr-resnet18-tau0.15,,,,,,
+simclr-tau,rerankme,175,simclr-resnet18-tau0.15,,,,,,
+simclr-tau,rerankme,250,simclr-resnet18-tau0.15,,,,,,
+simclr-tau,rerankme,275,simclr-resnet18-tau0.15,,,,,,

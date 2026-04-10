@@ -1,0 +1,7 @@
+sweep,downstream,selection_metric,first_epoch_in_band
+simclr-tau,linear_probe,rankme,
+simclr-tau,linear_probe,rerankme,
+simclr-tau,knn_probe,rankme,
+simclr-tau,knn_probe,rerankme,
+simclr-tau,cifar10c,rankme,
+simclr-tau,cifar10c,rerankme,
