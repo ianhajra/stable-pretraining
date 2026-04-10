@@ -1,4 +1,4 @@
-"""Entry point: generate all early-selection curve figures.
+"""Entry point: generate all figures.
 
 Usage:
     python experiments/analysis/make_all_figures.py [--log_dir DIR] [--output_dir DIR]
@@ -7,6 +7,7 @@ Usage:
 import argparse
 
 import early_selection_curve
+import correlation_analysis
 
 
 def main() -> None:
@@ -25,6 +26,13 @@ def main() -> None:
     print("Generating early selection curve figures …")
     print("=" * 60)
     early_selection_curve.main(
+        log_dir=args.log_dir, output_dir=args.output_dir, sweeps=args.sweeps
+    )
+
+    print("=" * 60)
+    print("Generating correlation figures …")
+    print("=" * 60)
+    correlation_analysis.main(
         log_dir=args.log_dir, output_dir=args.output_dir, sweeps=args.sweeps
     )
 

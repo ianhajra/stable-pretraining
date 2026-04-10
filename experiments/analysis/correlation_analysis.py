@@ -11,10 +11,8 @@ import math
 from pathlib import Path
 from typing import Optional
 
-from log_reader import get_metric_at_epoch
+from log_reader import get_metric_at_epoch, get_logged_epochs
 from hyperparameter_selection import SWEEPS, DOWNSTREAM_METRICS, SELECTION_METRICS
-
-CORRELATION_EPOCHS = [25, 50, 100, 150, 200, 250, 299]
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +76,9 @@ def main(
     for sweep_name, run_names in active_sweeps.items():
         summary_lines.append(f"\n=== Sweep: {sweep_name} ===")
 
-        for epoch in CORRELATION_EPOCHS:
+        for epoch in get_logged_epochs(
+            run_names, next(iter(SELECTION_METRICS.values())), log_dir=log_dir
+        ):
             for sel_name, sel_key in SELECTION_METRICS.items():
                 # Gather (sel_metric, downstream_metric) pairs across runs
                 sel_vals: list[float] = []
@@ -142,6 +142,56 @@ def main(
         print(f"Saved: {csv_path}")
 
     print("\n".join(summary_lines))
+
+    # -----------------------------------------------------------------------
+    # Figures: one per sweep, subplots = downstream metrics
+    # -----------------------------------------------------------------------
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    figures_dir = results_dir / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    ds_names = list(DOWNSTREAM_METRICS.keys())
+    sel_names = list(SELECTION_METRICS.keys())
+
+    for sweep_name in active_sweeps:
+        sweep_rows = [r for r in rows if r["sweep"] == sweep_name]
+        if not sweep_rows:
+            continue
+
+        fig, axes = plt.subplots(
+            1, len(ds_names), figsize=(5 * len(ds_names), 4), sharey=False
+        )
+        if len(ds_names) == 1:
+            axes = [axes]
+
+        for ax, ds_name in zip(axes, ds_names):
+            for sel_name in sel_names:
+                sel_rows = sorted(
+                    [r for r in sweep_rows if r["selection_metric"] == sel_name],
+                    key=lambda r: r["epoch"],
+                )
+                epochs = [r["epoch"] for r in sel_rows]
+                pearson = [r[f"pearson_{ds_name}"] for r in sel_rows]
+                ax.plot(epochs, pearson, label=sel_name)
+
+            ax.set_title(ds_name)
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel("Pearson r")
+            ax.set_ylim(-1, 1)
+            ax.axhline(0, color="black", linewidth=0.5, linestyle="--")
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+
+        fig.suptitle(f"{sweep_name} — correlation with final downstream accuracy")
+        fig.tight_layout()
+        fig_path = figures_dir / f"correlation_{sweep_name}.png"
+        fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Saved: {fig_path}")
 
 
 if __name__ == "__main__":
