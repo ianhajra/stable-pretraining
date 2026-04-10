@@ -14,7 +14,7 @@ from typing import Optional
 from log_reader import get_metric_at_epoch
 from hyperparameter_selection import SWEEPS, DOWNSTREAM_METRICS, SELECTION_METRICS
 
-CORRELATION_EPOCHS = [25, 50, 100, 150, 200, 250, 300]
+CORRELATION_EPOCHS = [25, 50, 100, 150, 200, 250, 299]
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ def main(
                     for ds_name, ds_metric in DOWNSTREAM_METRICS.items():
                         try:
                             ds_row[ds_name] = get_metric_at_epoch(
-                                run, ds_metric, 300, log_dir=log_dir
+                                run, ds_metric, 299, log_dir=log_dir
                             )
                         except (KeyError, FileNotFoundError):
                             ok = False
@@ -124,7 +124,7 @@ def main(
 
                 rows.append(row)
 
-                if epoch == 300:
+                if epoch == 299:
                     line = f"  [{sel_name} @ ep{epoch}]"
                     for ds_name in DOWNSTREAM_METRICS:
                         line += (

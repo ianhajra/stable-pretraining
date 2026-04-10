@@ -52,8 +52,8 @@ SWEEPS = {
     ],
 }
 
-SELECTION_EPOCHS = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300]
-FINAL_EPOCH = 300
+SELECTION_EPOCHS = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 299]
+FINAL_EPOCH = 299
 
 DOWNSTREAM_METRICS = {
     "linear_probe": "eval/linear_probe_top1_epoch",

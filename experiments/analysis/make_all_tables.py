@@ -39,7 +39,7 @@ def main() -> None:
 
     # Summary: which selection metric won each comparison at final epoch
     print("\n" + "=" * 60)
-    print("Summary: which metric won each comparison (epoch=300 Pearson r)")
+    print("Summary: which metric won each comparison (epoch=299 Pearson r)")
     print("=" * 60)
     from log_reader import get_metric_at_epoch
     from correlation_analysis import _pearson
@@ -56,10 +56,10 @@ def main() -> None:
                 for run in run_names:
                     try:
                         sv = get_metric_at_epoch(
-                            run, sel_key, 300, log_dir=args.log_dir
+                            run, sel_key, 299, log_dir=args.log_dir
                         )
                         dv = get_metric_at_epoch(
-                            run, ds_metric, 300, log_dir=args.log_dir
+                            run, ds_metric, 299, log_dir=args.log_dir
                         )
                         sel_vals.append(sv)
                         ds_vals.append(dv)
