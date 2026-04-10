@@ -60,7 +60,11 @@ def _spearman(xs: list[float], ys: list[float]) -> float:
 # ---------------------------------------------------------------------------
 
 
-def main(log_dir: Optional[str] = None, output_dir: Optional[str] = None) -> None:
+def main(
+    log_dir: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    sweeps: Optional[list[str]] = None,
+) -> None:
     results_dir = (
         Path(output_dir) if output_dir else Path(__file__).parent.parent / "results"
     )
@@ -70,7 +74,8 @@ def main(log_dir: Optional[str] = None, output_dir: Optional[str] = None) -> Non
     rows = []
     summary_lines = []
 
-    for sweep_name, run_names in SWEEPS.items():
+    active_sweeps = {k: v for k, v in SWEEPS.items() if sweeps is None or k in sweeps}
+    for sweep_name, run_names in active_sweeps.items():
         summary_lines.append(f"\n=== Sweep: {sweep_name} ===")
 
         for epoch in CORRELATION_EPOCHS:
@@ -145,5 +150,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_dir", default=None)
     parser.add_argument("--output_dir", default=None)
+    parser.add_argument(
+        "--sweeps",
+        nargs="+",
+        default=None,
+        help="Sweep names to include (e.g. simclr-tau vicreg-cov). Default: all.",
+    )
     args = parser.parse_args()
-    main(log_dir=args.log_dir, output_dir=args.output_dir)
+    main(log_dir=args.log_dir, output_dir=args.output_dir, sweeps=args.sweeps)

@@ -31,11 +31,16 @@ DEFAULT_PROJECT = ""  # e.g. "rerankme"
 DEFAULT_LOG_DIR = Path.home() / "scratch" / "rerankme" / "logs"
 
 
-def export_runs(entity: str, project: str, log_dir: Path) -> None:
+def export_runs(
+    entity: str, project: str, log_dir: Path, sweeps: list[str] | None = None
+) -> None:
     api = wandb.Api()
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    all_run_names: list[str] = [name for runs in SWEEPS.values() for name in runs]
+    active_sweeps = {k: v for k, v in SWEEPS.items() if sweeps is None or k in sweeps}
+    all_run_names: list[str] = [
+        name for runs in active_sweeps.values() for name in runs
+    ]
 
     # Fetch all runs in the project once so we don't make one request per run.
     print(f"Fetching run list from {entity}/{project} …")

@@ -15,17 +15,27 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_dir", default=None)
     parser.add_argument("--output_dir", default=None)
+    parser.add_argument(
+        "--sweeps",
+        nargs="+",
+        default=None,
+        help="Sweep names to include (e.g. simclr-tau vicreg-cov). Default: all.",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
     print("Running hyperparameter selection analysis …")
     print("=" * 60)
-    hyperparameter_selection.main(log_dir=args.log_dir, output_dir=args.output_dir)
+    hyperparameter_selection.main(
+        log_dir=args.log_dir, output_dir=args.output_dir, sweeps=args.sweeps
+    )
 
     print("\n" + "=" * 60)
     print("Running correlation analysis …")
     print("=" * 60)
-    correlation_analysis.main(log_dir=args.log_dir, output_dir=args.output_dir)
+    correlation_analysis.main(
+        log_dir=args.log_dir, output_dir=args.output_dir, sweeps=args.sweeps
+    )
 
     # Summary: which selection metric won each comparison at final epoch
     print("\n" + "=" * 60)
@@ -34,7 +44,10 @@ def main() -> None:
     from log_reader import get_metric_at_epoch
     from correlation_analysis import _pearson
 
-    for sweep_name, run_names in SWEEPS.items():
+    active_sweeps = {
+        k: v for k, v in SWEEPS.items() if args.sweeps is None or k in args.sweeps
+    }
+    for sweep_name, run_names in active_sweeps.items():
         print(f"\n{sweep_name}:")
         for ds_name, ds_metric in DOWNSTREAM_METRICS.items():
             scores = {}

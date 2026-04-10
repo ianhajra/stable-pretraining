@@ -57,7 +57,11 @@ def _compute_selection_curve(
     return curve
 
 
-def main(log_dir: Optional[str] = None, output_dir: Optional[str] = None) -> None:
+def main(
+    log_dir: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    sweeps: Optional[list[str]] = None,
+) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -71,7 +75,8 @@ def main(log_dir: Optional[str] = None, output_dir: Optional[str] = None) -> Non
 
     summary_rows = []
 
-    for sweep_name, run_names in SWEEPS.items():
+    active_sweeps = {k: v for k, v in SWEEPS.items() if sweeps is None or k in sweeps}
+    for sweep_name, run_names in active_sweeps.items():
         for ds_name, ds_metric in DOWNSTREAM_METRICS.items():
             # Oracle: best possible final downstream value
             oracle = None
@@ -151,5 +156,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_dir", default=None)
     parser.add_argument("--output_dir", default=None)
+    parser.add_argument(
+        "--sweeps",
+        nargs="+",
+        default=None,
+        help="Sweep names to include (e.g. simclr-tau vicreg-cov). Default: all.",
+    )
     args = parser.parse_args()
-    main(log_dir=args.log_dir, output_dir=args.output_dir)
+    main(log_dir=args.log_dir, output_dir=args.output_dir, sweeps=args.sweeps)
