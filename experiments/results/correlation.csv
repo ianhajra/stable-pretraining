@@ -1,0 +1,9 @@
+sweep,epoch,selection_metric,n_runs,pearson_linear_probe,spearman_linear_probe,pearson_knn_probe,spearman_knn_probe,pearson_cifar10c,spearman_cifar10c
+simclr-tau,25,rankme,7,-0.9415,-1.0,-0.9579,-0.9643,-0.9174,-0.8929
+simclr-tau,25,rerankme,7,0.7509,0.3929,0.7321,0.4286,0.5622,0.5714
+simclr-tau,150,rankme,7,-0.8831,-1.0,-0.908,-0.9643,-0.8767,-0.8929
+simclr-tau,150,rerankme,7,0.7949,0.3929,0.7818,0.4286,0.6264,0.5714
+simclr-tau,250,rankme,7,-0.8439,-1.0,-0.8675,-0.9643,-0.8539,-0.8929
+simclr-tau,250,rerankme,7,0.7794,0.3929,0.7654,0.4286,0.6171,0.5714
+simclr-tau,299,rankme,7,-0.8405,-1.0,-0.8646,-0.9643,-0.8459,-0.8929
+simclr-tau,299,rerankme,7,0.7621,0.3929,0.747,0.4286,0.5962,0.5714
