@@ -51,15 +51,40 @@ def get_metric_at_epoch(
     metric: str,
     epoch: int,
     log_dir: Optional[str] = None,
+    tolerance: int = 5,
 ) -> float:
-    """Return the logged value of a metric at a specific epoch for a run."""
+    """Return the logged value of a metric at or nearest to a specific epoch.
+
+    If the exact epoch is not present, returns the value from the closest
+    available epoch within ``tolerance`` epochs.  Raises KeyError if no epoch
+    within the tolerance exists.
+    """
     history = get_metric_history(run_name, metric, log_dir=log_dir)
-    if epoch not in history:
-        raise KeyError(
-            f"Epoch {epoch} not found in history for run '{run_name}', metric '{metric}'. "
-            f"Available epochs: {sorted(history.keys())}"
-        )
-    return history[epoch]
+    if epoch in history:
+        return history[epoch]
+    available = sorted(history.keys())
+    nearest = min(available, key=lambda e: abs(e - epoch))
+    if abs(nearest - epoch) <= tolerance:
+        return history[nearest]
+    raise KeyError(
+        f"Epoch {epoch} not found within tolerance={tolerance} for run '{run_name}', "
+        f"metric '{metric}'. Nearest available: {nearest}."
+    )
+
+
+def get_logged_epochs(
+    run_names: list[str],
+    metric: str,
+    log_dir: Optional[str] = None,
+) -> list[int]:
+    """Return sorted union of all epochs at which metric was logged across runs."""
+    epochs: set[int] = set()
+    for run in run_names:
+        try:
+            epochs.update(get_metric_history(run, metric, log_dir=log_dir).keys())
+        except FileNotFoundError:
+            pass
+    return sorted(epochs)
 
 
 def find_checkpoint(

@@ -13,12 +13,11 @@ import csv
 from pathlib import Path
 from typing import Optional
 
-from log_reader import get_metric_at_epoch
+from log_reader import get_metric_at_epoch, get_logged_epochs
 from hyperparameter_selection import (
     SWEEPS,
     DOWNSTREAM_METRICS,
     SELECTION_METRICS,
-    SELECTION_EPOCHS,
     FINAL_EPOCH,
     algorithm1,
 )
@@ -35,7 +34,7 @@ def _compute_selection_curve(
 ) -> dict[int, Optional[float]]:
     """For each selection epoch, return the final downstream accuracy of the selected run."""
     curve: dict[int, Optional[float]] = {}
-    for epoch in SELECTION_EPOCHS:
+    for epoch in get_logged_epochs(run_names, sel_metric_key, log_dir=log_dir):
         pairs = []
         for run in run_names:
             try:
@@ -105,7 +104,7 @@ def main(
 
                 first_in_band[sel_name] = None
                 if oracle is not None:
-                    for e in SELECTION_EPOCHS:
+                    for e in sorted(curve.keys()):
                         v = curve.get(e)
                         if v is not None and abs(v - oracle) <= ORACLE_BAND:
                             first_in_band[sel_name] = e

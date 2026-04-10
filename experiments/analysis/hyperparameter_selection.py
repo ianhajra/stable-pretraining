@@ -12,7 +12,7 @@ import csv
 from pathlib import Path
 from typing import Optional
 
-from log_reader import get_metric_at_epoch
+from log_reader import get_metric_at_epoch, get_logged_epochs
 
 # ---------------------------------------------------------------------------
 # Sweep definitions
@@ -52,7 +52,7 @@ SWEEPS = {
     ],
 }
 
-SELECTION_EPOCHS = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 299]
+SELECTION_EPOCHS = None  # None = use all logged epochs dynamically per sweep
 FINAL_EPOCH = 299
 
 DOWNSTREAM_METRICS = {
@@ -126,7 +126,8 @@ def main(
             oracles[ds_name] = best_val
 
         for sel_metric_name, sel_metric_key in SELECTION_METRICS.items():
-            for sel_epoch in SELECTION_EPOCHS:
+            sel_epochs = get_logged_epochs(run_names, sel_metric_key, log_dir=log_dir)
+            for sel_epoch in sel_epochs:
                 # Gather selection metric values at sel_epoch for all runs
                 pairs = []
                 for run in run_names:
@@ -162,7 +163,7 @@ def main(
 
                 rows.append(row)
 
-                if sel_epoch in (100, 200, 300):
+                if sel_epoch in (100, 200, 299):
                     line = (
                         f"  [{sel_metric_name} @ ep{sel_epoch}] selected={selected_run}"
                     )
