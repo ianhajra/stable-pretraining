@@ -91,8 +91,6 @@ def main(
 
             fig, ax = plt.subplots(figsize=(8, 5))
 
-            first_in_band: dict[str, Optional[int]] = {}
-
             for sel_name, sel_key in SELECTION_METRICS.items():
                 curve = _compute_selection_curve(
                     sweep_name, run_names, sel_key, ds_metric, log_dir
@@ -102,22 +100,27 @@ def main(
 
                 ax.plot(epochs, values, marker="o", label=sel_name)
 
-                first_in_band[sel_name] = None
+                first_in_band: Optional[int] = None
                 if oracle is not None:
                     for e in sorted(curve.keys()):
                         v = curve.get(e)
                         if v is not None and abs(v - oracle) <= ORACLE_BAND:
-                            first_in_band[sel_name] = e
+                            first_in_band = e
                             break
 
-                summary_rows.append(
-                    {
-                        "sweep": sweep_name,
-                        "downstream": ds_name,
-                        "selection_metric": sel_name,
-                        "first_epoch_in_band": first_in_band[sel_name],
-                    }
-                )
+                for e in sorted(curve.keys()):
+                    v = curve.get(e)
+                    summary_rows.append(
+                        {
+                            "sweep": sweep_name,
+                            "downstream": ds_name,
+                            "selection_metric": sel_name,
+                            "selection_epoch": e,
+                            "selected_final_downstream": v,
+                            "oracle": oracle,
+                            "first_epoch_in_band": first_in_band,
+                        }
+                    )
 
             if oracle is not None:
                 ax.axhline(oracle, linestyle="--", color="black", label="oracle")
