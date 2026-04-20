@@ -44,20 +44,21 @@ args = parse_args()
 # ----------------------
 pl.seed_everything(args.seed, workers=True)
 
+
 # ----------------------
 # Transforms
 # ----------------------
-from torchvision import transforms as tvtf
+import stable_pretraining.data.transforms as spt_transforms
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
-base_transform = tvtf.Compose([
-    tvtf.ToTensor(),
-    tvtf.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-])
+# Minimal normalization transform for ImageNet stats
+base_transform = spt_transforms.Compose(
+    spt_transforms.ToImage(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+)
 
-# MultiViewTransform for SimCLR (two views)
-train_transform = spt.data.transforms.MultiViewTransform([
+# MultiViewTransform for SimCLR (two identical minimal views)
+train_transform = spt_transforms.MultiViewTransform([
     base_transform,
     base_transform,
 ])
