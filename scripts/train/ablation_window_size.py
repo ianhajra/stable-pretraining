@@ -17,6 +17,8 @@ from lightning.pytorch.callbacks import LearningRateMonitor
 import timm
 import stable_pretraining as spt
 from stable_pretraining.callbacks import RankMe
+from stable_pretraining import forward
+
 import sys
 from pathlib import Path
 
@@ -123,7 +125,7 @@ projector = nn.Sequential(
 module = spt.Module(
     backbone=backbone,
     projector=projector,
-    forward=spt.forward.simclr_forward,
+    forward=forward.simclr_forward,
     simclr_loss=spt.losses.NTXEntLoss(temperature=0.07),
     optim={
         "optimizer": {
