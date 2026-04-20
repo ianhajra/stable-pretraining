@@ -1,0 +1,9 @@
+requests
+pandas
+pyarrow
+yfinance
+lxml
+Pillow
+datasets
+scipy
+distutils

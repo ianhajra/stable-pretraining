@@ -28,7 +28,23 @@ set -e
 mkdir -p logs
 
 # ─── Activate conda environment ───────────────────────────────────────────────
-source activate spt
+# SLURM runs a non-interactive shell, so conda must be initialised explicitly.
+CONDA_BASE=$(conda info --base 2>/dev/null)
+if [[ -z "$CONDA_BASE" ]]; then
+    # Fallback: check common install locations
+    for _p in "$HOME/miniconda3" "$HOME/anaconda3" "/oscar/runtime/software/miniconda/23.11.0"; do
+        if [[ -f "$_p/etc/profile.d/conda.sh" ]]; then
+            CONDA_BASE="$_p"
+            break
+        fi
+    done
+fi
+if [[ -z "$CONDA_BASE" ]]; then
+    echo "ERROR: could not locate conda installation" >&2
+    exit 1
+fi
+source "$CONDA_BASE/etc/profile.d/conda.sh"
+conda activate spt
 PYTHON=python
 
 
