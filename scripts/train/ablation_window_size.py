@@ -135,7 +135,6 @@ module = spt.Module(
         },
         "scheduler": {
             "type": "LinearWarmupCosineAnnealing",
-            "warmup_epochs": 10,
         },
         "interval": "epoch",
     },
