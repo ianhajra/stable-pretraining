@@ -64,6 +64,7 @@ train_transform = spt_transforms.MultiViewTransform([
 ])
 val_transform = base_transform
 
+
 # ----------------------
 # Dataset: robust label selection
 # ----------------------
@@ -71,21 +72,25 @@ rename_columns = None
 if args.dataset == "ff":
     # For FF, keep all factor columns accessible by original names
     rename_columns = None
+    remove_columns = ["start_date", "end_date"]
 elif args.dataset == "sp500":
     # Use sector as the label for S&P 500
     rename_columns = None
+    remove_columns = ["ticker", "sector", "start_date", "end_date"]
 
 train_ds = spt.data.HFDataset(
     args.data_dir,
     split="train",
     transform=train_transform,
     rename_columns=rename_columns,
+    remove_columns=remove_columns,
 )
 val_ds = spt.data.HFDataset(
     args.data_dir,
     split="validation",
     transform=val_transform,
     rename_columns=rename_columns,
+    remove_columns=remove_columns,
 )
 
 train_loader = torch.utils.data.DataLoader(
