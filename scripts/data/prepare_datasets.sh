@@ -80,10 +80,10 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # ─── Sentinel paths ───────────────────────────────────────────────────────────
-SP500_SENTINEL="$OUTPUT_DIR/data/sp500/sp500_train.parquet"
-SP500_ENC_SENTINEL="$OUTPUT_DIR/data/sp500_encoded/gaf_mtf/w063/metadata.csv"
-FF_SENTINEL="$OUTPUT_DIR/data/ff/30_industry_daily_vw.parquet"
-FF_ENC_SENTINEL="$OUTPUT_DIR/data/ff_encoded/heatmap/w063/metadata.csv"
+SP500_SENTINEL="$OUTPUT_DIR/sp500/sp500_train.parquet"
+SP500_ENC_SENTINEL="$OUTPUT_DIR/sp500_encoded/gaf_mtf/w063/metadata.csv"
+FF_SENTINEL="$OUTPUT_DIR/ff/30_industry_daily_vw.parquet"
+FF_ENC_SENTINEL="$OUTPUT_DIR/ff_encoded/heatmap/w063/metadata.csv"
 
 # ─── Tracking ─────────────────────────────────────────────────────────────────
 STEP1_STATUS="skipped"
@@ -104,7 +104,7 @@ header "Step 1 / 4 — Download S&P 500 OHLCV data"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$SP500_SENTINEL" ]]; then
     echo "  Running: python scripts/data/download_sp500.py"
-    $PYTHON scripts/data/download_sp500.py --output_dir "$OUTPUT_DIR/data/sp500/"
+    $PYTHON scripts/data/download_sp500.py --output_dir "$OUTPUT_DIR/sp500/"
     STEP1_STATUS="run"
 else
     echo "  SKIPPED — $SP500_SENTINEL already exists (use --force to re-run)"
@@ -115,7 +115,7 @@ header "Step 2 / 4 — Encode S&P 500 images (all four window sizes)"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$SP500_ENC_SENTINEL" ]]; then
     echo "  Running: python scripts/data/encode_sp500.py"
-    $PYTHON scripts/data/encode_sp500.py --output_dir "$OUTPUT_DIR/data/sp500_encoded/"
+    $PYTHON scripts/data/encode_sp500.py --output_dir "$OUTPUT_DIR/sp500_encoded/"
     STEP2_STATUS="run"
 else
     echo "  SKIPPED — $SP500_ENC_SENTINEL already exists (use --force to re-run)"
@@ -126,7 +126,7 @@ header "Step 3 / 4 — Download Fama-French 30-industry data"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$FF_SENTINEL" ]]; then
     echo "  Running: python scripts/data/download_ff_30_industry.py"
-    $PYTHON scripts/data/download_ff_30_industry.py --output_dir "$OUTPUT_DIR/data/ff/"
+    $PYTHON scripts/data/download_ff_30_industry.py --output_dir "$OUTPUT_DIR/ff/"
     STEP3_STATUS="run"
 else
     echo "  SKIPPED — $FF_SENTINEL already exists (use --force to re-run)"
@@ -137,7 +137,7 @@ header "Step 4 / 4 — Encode FF 30-industry heatmap images (all four window siz
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$FF_ENC_SENTINEL" ]]; then
     echo "  Running: python scripts/data/encode_ff.py"
-    $PYTHON scripts/data/encode_ff.py --output_dir "$OUTPUT_DIR/data/ff_encoded/"
+    $PYTHON scripts/data/encode_ff.py --output_dir "$OUTPUT_DIR/ff_encoded/"
     STEP4_STATUS="run"
 else
     echo "  SKIPPED — $FF_ENC_SENTINEL already exists (use --force to re-run)"
@@ -154,8 +154,8 @@ echo "  Step 3 (FF 30-industry download) : $STEP3_STATUS"
 echo "  Step 4 (FF heatmap encoding)     : $STEP4_STATUS"
 echo ""
 echo "  Outputs:"
-echo "    $OUTPUT_DIR/data/sp500/                          (parquet files)"
-echo "    $OUTPUT_DIR/data/sp500_encoded/gaf_mtf/w{020,063,126,252}/"
-echo "    $OUTPUT_DIR/data/sp500_encoded/candlestick/w{020,063,126,252}/"
-echo "    $OUTPUT_DIR/data/ff_encoded/heatmap/w{020,063,126,252}/"
+echo "    $OUTPUT_DIR/sp500/                          (parquet files)"
+echo "    $OUTPUT_DIR/sp500_encoded/gaf_mtf/w{020,063,126,252}/"
+echo "    $OUTPUT_DIR/sp500_encoded/candlestick/w{020,063,126,252}/"
+echo "    $OUTPUT_DIR/ff_encoded/heatmap/w{020,063,126,252}/"
 echo "================================================================"
