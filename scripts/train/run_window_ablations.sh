@@ -37,7 +37,7 @@ PYTHON=python
 
 # ─── Parse arguments ──────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ABLATION_SCRIPT="$SCRIPT_DIR/simclr_window_ablation.py"
+ABLATION_SCRIPT="$SCRIPT_DIR/ablation_window_size.py"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
