@@ -70,7 +70,7 @@ if args.dataset == "ff":
     rename_columns = None
 elif args.dataset == "sp500":
     # Use sector as the label for S&P 500
-    rename_columns = {"sector": "label"}
+    rename_columns = None
 
 train_ds = spt.data.HFDataset(
     args.data_dir,
