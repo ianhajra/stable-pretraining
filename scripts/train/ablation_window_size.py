@@ -105,7 +105,7 @@ elif args.dataset == "sp500":
 # Load the full DatasetDict once, then select splits
 full_dataset = load_from_disk(args.data_dir)
 train_split = full_dataset["train"]
-val_split = full_dataset["validation"]
+val_split = full_dataset["val"]
 
 train_ds = FinancialImageDataset(train_split, transform=train_transform)
 val_ds = FinancialImageDataset(val_split, transform=val_transform)
