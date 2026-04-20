@@ -54,6 +54,7 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 
 # Minimal normalization transform for ImageNet stats
 base_transform = spt_transforms.Compose(
+    spt_transforms.RGB(),
     spt_transforms.ToImage(mean=IMAGENET_MEAN, std=IMAGENET_STD)
 )
 
@@ -62,7 +63,11 @@ train_transform = spt_transforms.MultiViewTransform([
     base_transform,
     base_transform,
 ])
-val_transform = base_transform
+
+val_transform = spt_transforms.Compose(
+    spt_transforms.RGB(),
+    spt_transforms.ToImage(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+)
 
 # ----------------------
 # Dataset: robust label selection
