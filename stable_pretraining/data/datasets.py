@@ -164,7 +164,13 @@ class HFDataset(Dataset):
             logging.info(f"Loading dataset with load_from_disk {hf_path}")
             load_dataset_fn = datasets.load_from_disk
 
+
         dataset = with_hf_retry_ratelimit(load_dataset_fn, *args, **kwargs)
+        # If loading from disk and result is a DatasetDict, select the split manually
+        import datasets as _datasets_mod
+        if load_dataset_fn is _datasets_mod.load_from_disk and isinstance(dataset, _datasets_mod.DatasetDict):
+            split_name = kwargs.get("split", args[1] if len(args) > 1 else "train")
+            dataset = dataset[split_name]
         dataset = dataset.add_column("sample_idx", list(range(dataset.num_rows)))
 
         if rename_columns is not None:
