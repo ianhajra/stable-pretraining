@@ -115,7 +115,7 @@ header "Step 2 / 4 — Encode S&P 500 images (all four window sizes)"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$SP500_ENC_SENTINEL" ]]; then
     echo "  Running: python scripts/data/encode_sp500.py"
-    $PYTHON scripts/data/encode_sp500.py --output_dir "$OUTPUT_DIR/sp500_encoded/"
+    $PYTHON scripts/data/encode_sp500.py --input_dir "$OUTPUT_DIR/sp500" --output_dir "$OUTPUT_DIR/sp500_encoded/"
     STEP2_STATUS="run"
 else
     echo "  SKIPPED — $SP500_ENC_SENTINEL already exists (use --force to re-run)"
@@ -137,7 +137,7 @@ header "Step 4 / 4 — Encode FF 30-industry heatmap images (all four window siz
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$FF_ENC_SENTINEL" ]]; then
     echo "  Running: python scripts/data/encode_ff.py"
-    $PYTHON scripts/data/encode_ff.py --output_dir "$OUTPUT_DIR/ff_encoded/"
+    $PYTHON scripts/data/encode_ff.py --input_parquet "$OUTPUT_DIR/ff/30_industry_daily_vw.parquet" --output_dir "$OUTPUT_DIR/ff_encoded/"
     STEP4_STATUS="run"
 else
     echo "  SKIPPED — $FF_ENC_SENTINEL already exists (use --force to re-run)"
