@@ -37,6 +37,7 @@ Dates are stored as a DatetimeIndex named "date".
 Missing values are converted to NaN.
 """
 
+import argparse
 import io
 import re
 import zipfile
@@ -172,4 +173,13 @@ def download_and_save(url: str = URL, out_dir: Path = OUT_DIR) -> None:
 
 
 if __name__ == "__main__":
-    download_and_save()
+    parser = argparse.ArgumentParser(description="Download Fama-French 30-industry data.")
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        default=None,
+        help="Directory to save output parquet files (default: data/ff/ relative to repo root).",
+    )
+    args = parser.parse_args()
+    out_dir = args.output_dir if args.output_dir is not None else OUT_DIR
+    download_and_save(out_dir=out_dir)

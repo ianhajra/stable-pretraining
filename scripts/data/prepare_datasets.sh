@@ -1,52 +1,73 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # prepare_datasets.sh
 #
 # Orchestrates the full dataset preparation pipeline for stable-pretraining.
-# Must be run from the repository root:
+# Submit with:
 #
-#   bash scripts/data/prepare_datasets.sh [--force]
+#   sbatch scripts/data/prepare_datasets.sh [--force] [--output-dir PATH]
 #
 # Steps
 # -----
-#   1. Download S&P 500 OHLCV parquet files          (scripts/data/download_sp500.py)
-#   2. Encode S&P 500 images for all four window sizes (scripts/data/encode_sp500.py)
-#   3. Download and encode FF heatmap images           (scripts/data/encode_ff.py)
+#   1. Download S&P 500 OHLCV parquet files           (scripts/data/download_sp500.py)
+#   2. Encode S&P 500 images for all four window sizes  (scripts/data/encode_sp500.py)
+#   3. Download Fama-French 30-industry data            (scripts/data/download_ff_30_industry.py)
+#   4. Encode FF heatmap images                         (scripts/data/encode_ff.py)
 #
 # Each step is skipped if its sentinel output already exists unless --force is given.
 
+#SBATCH --job-name=prepare_datasets
+#SBATCH --output=logs/prepare_datasets_%j.out
+#SBATCH --error=logs/prepare_datasets_%j.err
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=08:00:00
+
 set -e
 
-# ─── Resolve Python executable ────────────────────────────────────────────────
-# Prefer the conda env's Python if it exists, otherwise fall back to python3.
-CONDA_PYTHON="$HOME/miniconda3/envs/stable-pretraining/bin/python"
-if [[ ! -x "$CONDA_PYTHON" ]]; then
-    CONDA_PYTHON="$HOME/anaconda3/envs/stable-pretraining/bin/python"
-fi
-if [[ -x "$CONDA_PYTHON" ]]; then
-    PYTHON="$CONDA_PYTHON"
-    echo "Using conda env Python: $PYTHON"
-elif command -v python3 &>/dev/null; then
-    PYTHON="python3"
-    echo "Using system python3: $(which python3)"
-else
-    echo "ERROR: no Python interpreter found" >&2
-    exit 1
-fi
+mkdir -p logs
+
+# ─── Activate conda environment ───────────────────────────────────────────────
+source activate spt
+PYTHON=python
+
 
 # ─── Parse arguments ──────────────────────────────────────────────────────────
 FORCE=0
-for arg in "$@"; do
-    case "$arg" in
-        --force) FORCE=1 ;;
-        *) echo "Unknown argument: $arg" >&2; exit 1 ;;
+OUTPUT_DIR=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force)
+            FORCE=1
+            shift
+            ;;
+        --output-dir|-o)
+            OUTPUT_DIR="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            exit 1
+            ;;
     esac
 done
 
+# Set default output dir to ~/data/finance if not provided
+if [[ -z "$OUTPUT_DIR" ]]; then
+    OUTPUT_DIR="$HOME/data/finance"
+else
+    # Remove trailing slash if present
+    OUTPUT_DIR="${OUTPUT_DIR%/}"
+fi
+
+# Create the output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
+
 # ─── Sentinel paths ───────────────────────────────────────────────────────────
-SP500_SENTINEL="data/sp500/sp500_train.parquet"
-SP500_ENC_SENTINEL="data/sp500_encoded/gaf_mtf/w063/metadata.csv"
-FF_SENTINEL="data/ff/30_industry_daily_vw.parquet"
-FF_ENC_SENTINEL="data/ff_encoded/heatmap/w063/metadata.csv"
+SP500_SENTINEL="$OUTPUT_DIR/data/sp500/sp500_train.parquet"
+SP500_ENC_SENTINEL="$OUTPUT_DIR/data/sp500_encoded/gaf_mtf/w063/metadata.csv"
+FF_SENTINEL="$OUTPUT_DIR/data/ff/30_industry_daily_vw.parquet"
+FF_ENC_SENTINEL="$OUTPUT_DIR/data/ff_encoded/heatmap/w063/metadata.csv"
 
 # ─── Tracking ─────────────────────────────────────────────────────────────────
 STEP1_STATUS="skipped"
@@ -67,7 +88,7 @@ header "Step 1 / 4 — Download S&P 500 OHLCV data"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$SP500_SENTINEL" ]]; then
     echo "  Running: python scripts/data/download_sp500.py"
-    $PYTHON scripts/data/download_sp500.py
+    $PYTHON scripts/data/download_sp500.py --output_dir "$OUTPUT_DIR/data/sp500/"
     STEP1_STATUS="run"
 else
     echo "  SKIPPED — $SP500_SENTINEL already exists (use --force to re-run)"
@@ -78,7 +99,7 @@ header "Step 2 / 4 — Encode S&P 500 images (all four window sizes)"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$SP500_ENC_SENTINEL" ]]; then
     echo "  Running: python scripts/data/encode_sp500.py"
-    $PYTHON scripts/data/encode_sp500.py
+    $PYTHON scripts/data/encode_sp500.py --output_dir "$OUTPUT_DIR/data/sp500_encoded/"
     STEP2_STATUS="run"
 else
     echo "  SKIPPED — $SP500_ENC_SENTINEL already exists (use --force to re-run)"
@@ -89,7 +110,7 @@ header "Step 3 / 4 — Download Fama-French 30-industry data"
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$FF_SENTINEL" ]]; then
     echo "  Running: python scripts/data/download_ff_30_industry.py"
-    $PYTHON scripts/data/download_ff_30_industry.py
+    $PYTHON scripts/data/download_ff_30_industry.py --output_dir "$OUTPUT_DIR/data/ff/"
     STEP3_STATUS="run"
 else
     echo "  SKIPPED — $FF_SENTINEL already exists (use --force to re-run)"
@@ -100,7 +121,7 @@ header "Step 4 / 4 — Encode FF 30-industry heatmap images (all four window siz
 
 if [[ $FORCE -eq 1 ]] || [[ ! -f "$FF_ENC_SENTINEL" ]]; then
     echo "  Running: python scripts/data/encode_ff.py"
-    $PYTHON scripts/data/encode_ff.py
+    $PYTHON scripts/data/encode_ff.py --output_dir "$OUTPUT_DIR/data/ff_encoded/"
     STEP4_STATUS="run"
 else
     echo "  SKIPPED — $FF_ENC_SENTINEL already exists (use --force to re-run)"
@@ -117,8 +138,8 @@ echo "  Step 3 (FF 30-industry download) : $STEP3_STATUS"
 echo "  Step 4 (FF heatmap encoding)     : $STEP4_STATUS"
 echo ""
 echo "  Outputs:"
-echo "    data/sp500/                          (parquet files)"
-echo "    data/sp500_encoded/gaf_mtf/w{020,063,126,252}/"
-echo "    data/sp500_encoded/candlestick/w{020,063,126,252}/"
-echo "    data/ff_encoded/heatmap/w{020,063,126,252}/"
+echo "    $OUTPUT_DIR/data/sp500/                          (parquet files)"
+echo "    $OUTPUT_DIR/data/sp500_encoded/gaf_mtf/w{020,063,126,252}/"
+echo "    $OUTPUT_DIR/data/sp500_encoded/candlestick/w{020,063,126,252}/"
+echo "    $OUTPUT_DIR/data/ff_encoded/heatmap/w{020,063,126,252}/"
 echo "================================================================"
