@@ -77,7 +77,9 @@ submit_job() {
 
     sbatch <<EOF
 #!/bin/bash
+
 #SBATCH --job-name=$job_name
+#SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
