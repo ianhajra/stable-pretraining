@@ -80,7 +80,7 @@ train_ds = spt.data.HFDataset(
 )
 val_ds = spt.data.HFDataset(
     args.data_dir,
-    split="val",
+    split="validation",
     transform=val_transform,
     rename_columns=rename_columns,
 )
