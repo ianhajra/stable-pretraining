@@ -123,7 +123,7 @@ header "SP500 × gaf_mtf (4 window sizes)"
 for W in "${WINDOW_SIZES[@]}"; do
     JOB_NAME="abl_gaf_mtf_sp500_w$(printf '%03d' $W)"
     echo "  Submitting: $JOB_NAME"
-    submit_job "$JOB_NAME" "$SP500_BASE/gaf_mtf/w$W" 11 $W gaf_mtf sp500
+    submit_job "$JOB_NAME" "$SP500_BASE/gaf_mtf/w$(printf '%03d' $W)" 11 $W gaf_mtf sp500
 done
 
 # ─── SP500: candlestick ───────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ header "SP500 × candlestick (4 window sizes)"
 for W in "${WINDOW_SIZES[@]}"; do
     JOB_NAME="abl_candle_sp500_w$(printf '%03d' $W)"
     echo "  Submitting: $JOB_NAME"
-    submit_job "$JOB_NAME" "$SP500_BASE/candlestick/w$W" 11 $W candlestick sp500
+    submit_job "$JOB_NAME" "$SP500_BASE/candlestick/w$(printf '%03d' $W)" 11 $W candlestick sp500
 done
 
 # ─── FF: heatmap ──────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ header "FF × heatmap (4 window sizes)"
 for W in "${WINDOW_SIZES[@]}"; do
     JOB_NAME="abl_heatmap_ff_w$(printf '%03d' $W)"
     echo "  Submitting: $JOB_NAME"
-    submit_job "$JOB_NAME" "$FF_BASE/heatmap/w$W" 5 $W heatmap ff
+    submit_job "$JOB_NAME" "$FF_BASE/heatmap/w$(printf '%03d' $W)" 5 $W heatmap ff
 done
 
 # ─── Summary ──────────────────────────────────────────────────────────────────
