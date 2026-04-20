@@ -53,16 +53,25 @@ import stable_pretraining.data.transforms as spt_transforms
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
-# Minimal normalization transform for ImageNet stats
-base_transform = spt_transforms.Compose(
-    spt_transforms.RGB(),
-    spt_transforms.ToImage(mean=IMAGENET_MEAN, std=IMAGENET_STD)
-)
-
-# MultiViewTransform for SimCLR (two identical minimal views)
 train_transform = spt_transforms.MultiViewTransform([
-    base_transform,
-    base_transform,
+    spt_transforms.Compose(
+        spt_transforms.RGB(),
+        spt_transforms.RandomResizedCrop((224, 224)),
+        spt_transforms.ColorJitter(
+            brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+        ),
+        spt_transforms.RandomGrayscale(p=0.2),
+        spt_transforms.ToImage(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+    ),
+    spt_transforms.Compose(
+        spt_transforms.RGB(),
+        spt_transforms.RandomResizedCrop((224, 224)),
+        spt_transforms.ColorJitter(
+            brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+        ),
+        spt_transforms.RandomGrayscale(p=0.2),
+        spt_transforms.ToImage(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+    ),
 ])
 
 val_transform = spt_transforms.Compose(
@@ -277,7 +286,7 @@ trainer_callbacks = [knn_probe, *probes, rankme, lr_monitor]
 if avg_factor_acc_cb is not None:
     trainer_callbacks.append(avg_factor_acc_cb)
 trainer = pl.Trainer(
-    max_epochs=50,
+    max_epochs=100,
     num_sanity_val_steps=0,
     callbacks=trainer_callbacks,
     precision="16-mixed",
