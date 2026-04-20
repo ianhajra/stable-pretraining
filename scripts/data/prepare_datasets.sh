@@ -68,9 +68,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Set default output dir to ~/data if not provided
+# Set default output dir to /oscar/scratch/ihajra/finance if not provided
 if [[ -z "$OUTPUT_DIR" ]]; then
-    OUTPUT_DIR="$HOME/data"
+    OUTPUT_DIR="/oscar/scratch/ihajra/finance"
 else
     # Remove trailing slash if present
     OUTPUT_DIR="${OUTPUT_DIR%/}"
