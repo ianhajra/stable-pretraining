@@ -18,6 +18,7 @@ import timm
 import stable_pretraining as spt
 from stable_pretraining.callbacks import RankMe
 from stable_pretraining import forward
+from datasets import load_from_disk
 
 import sys
 from pathlib import Path
@@ -80,18 +81,34 @@ elif args.dataset == "sp500":
     # Use sector as the label for S&P 500
     rename_columns = None
 
-train_ds = spt.data.HFDataset(
-    args.data_dir,
-    split="train",
-    transform=train_transform,
-    rename_columns=rename_columns,
-)
-val_ds = spt.data.HFDataset(
-    args.data_dir,
-    split="validation",
-    transform=val_transform,
-    rename_columns=rename_columns,
-)
+# ----------------------
+# Dataset: robust label selection
+# ----------------------
+class FinancialImageDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset
+        self.transform = transform
+    def __getitem__(self, idx):
+        sample = self.dataset[idx]
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
+    def __len__(self):
+        return len(self.dataset)
+
+remove_columns = None
+if args.dataset == "ff":
+    remove_columns = ["start_date", "end_date"]
+elif args.dataset == "sp500":
+    remove_columns = ["ticker", "sector", "start_date", "end_date"]
+
+# Load the full DatasetDict once, then select splits
+full_dataset = load_from_disk(args.data_dir)
+train_split = full_dataset["train"]
+val_split = full_dataset["validation"]
+
+train_ds = FinancialImageDataset(train_split, transform=train_transform)
+val_ds = FinancialImageDataset(val_split, transform=val_transform)
 
 train_loader = torch.utils.data.DataLoader(
     train_ds,
