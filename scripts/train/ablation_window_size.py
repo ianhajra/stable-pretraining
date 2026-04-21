@@ -104,6 +104,10 @@ class FinancialImageDataset(torch.utils.data.Dataset):
             'label', 'label_mktrf', 'label_smb', 'label_hml', 'label_rmw', 'label_cma'
         ]
         label_dict = {k: sample[k] for k in label_keys if k in sample}
+        # Convert FF factor labels from 1-indexed to 0-indexed if present
+        for ff_col in ['label_mktrf', 'label_smb', 'label_hml', 'label_rmw', 'label_cma']:
+            if ff_col in label_dict:
+                label_dict[ff_col] = label_dict[ff_col] - 1
         # Apply transform
         if self.transform:
             sample = self.transform(sample)
