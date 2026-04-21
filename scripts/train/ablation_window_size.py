@@ -99,8 +99,17 @@ class FinancialImageDataset(torch.utils.data.Dataset):
         self.transform = transform
     def __getitem__(self, idx):
         sample = self.dataset[idx]
+        # Stash label columns
+        label_keys = [
+            'label', 'label_mktrf', 'label_smb', 'label_hml', 'label_rmw', 'label_cma'
+        ]
+        label_dict = {k: sample[k] for k in label_keys if k in sample}
+        # Apply transform
         if self.transform:
             sample = self.transform(sample)
+        # Merge label columns back
+        if isinstance(sample, dict):
+            sample.update(label_dict)
         return sample
     def __len__(self):
         return len(self.dataset)
