@@ -179,8 +179,10 @@ def simclr_forward(self, batch, stage):
         out["embedding"] = torch.cat(embeddings, dim=0)
 
         # Concatenate labels for callbacks (probes need this)
-        if "label" in views[0]:
-            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in views[0]:
+                out[key] = torch.cat([view[key] for view in views], dim=0)
 
         if self.training:
             projections = [self.projector(emb) for emb in embeddings]
@@ -195,8 +197,10 @@ def simclr_forward(self, batch, stage):
     else:
         # Single-view validation
         out["embedding"] = self.backbone(batch["image"])
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
     return out
 
@@ -240,8 +244,10 @@ def byol_forward(self, batch, stage):
         images = [view["image"] for view in views]
 
         # Concatenate labels for callbacks
-        if "label" in views[0]:
-            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in views[0]:
+                out[key] = torch.cat([view[key] for view in views], dim=0)
 
         # Get online embeddings for both views
         online_features = [self.backbone.forward_student(img) for img in images]
@@ -286,8 +292,10 @@ def byol_forward(self, batch, stage):
         # Single-view validation
         images = batch["image"]
 
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
         # Just return embeddings for validation
         with torch.no_grad():
@@ -337,8 +345,10 @@ def vicreg_forward(self, batch, stage):
         out["embedding"] = torch.cat(embeddings, dim=0)
 
         # Concatenate labels for callbacks
-        if "label" in views[0]:
-            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in views[0]:
+                out[key] = torch.cat([view[key] for view in views], dim=0)
 
         if self.training:
             projections = [self.projector(emb) for emb in embeddings]
@@ -353,8 +363,10 @@ def vicreg_forward(self, batch, stage):
     else:
         # Single-view validation
         out["embedding"] = self.backbone(batch["image"])
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
     return out
 
@@ -399,8 +411,10 @@ def barlow_twins_forward(self, batch, stage):
         out["embedding"] = torch.cat(embeddings, dim=0)
 
         # Concatenate labels for callbacks
-        if "label" in views[0]:
-            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in views[0]:
+                out[key] = torch.cat([view[key] for view in views], dim=0)
 
         if self.training:
             projections = [self.projector(emb) for emb in embeddings]
@@ -415,8 +429,10 @@ def barlow_twins_forward(self, batch, stage):
     else:
         # Single-view validation
         out["embedding"] = self.backbone(batch["image"])
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
     return out
 
@@ -435,8 +451,10 @@ def swav_forward(self, batch, stage):
         embeddings = [self.backbone(view["image"]) for view in views]
         out["embedding"] = torch.cat(embeddings, dim=0)
 
-        if "label" in views[0]:
-            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in views[0]:
+                out[key] = torch.cat([view[key] for view in views], dim=0)
 
         if self.training:
             projections = [self.projector(emb) for emb in embeddings]
@@ -475,8 +493,10 @@ def swav_forward(self, batch, stage):
 
     else:
         out["embedding"] = self.backbone(batch["image"])
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
     return out
 
@@ -533,8 +553,10 @@ def nnclr_forward(self, batch, stage):
         out["embedding"] = torch.cat(embeddings, dim=0)
 
         # Concatenate labels for callbacks
-        if "label" in views[0]:
-            out["label"] = torch.cat([view["label"] for view in views], dim=0)
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in views[0]:
+                out[key] = torch.cat([view[key] for view in views], dim=0)
 
         if self.training:
             if not hasattr(self, "_nnclr_queue_callback"):
@@ -579,8 +601,10 @@ def nnclr_forward(self, batch, stage):
     else:
         # Single-view validation
         out["embedding"] = self.backbone(batch["image"])
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
     return out
 
@@ -631,8 +655,10 @@ def dino_forward(self, batch, stage):
     else:
         # Single view validation
         images = batch["image"]
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
         with torch.no_grad():
             teacher_features = self.backbone.forward_teacher(images)
@@ -643,13 +669,15 @@ def dino_forward(self, batch, stage):
     batch_size = all_views[0]["image"].shape[0]
 
     # Concatenate labels for callbacks - only from global views for probes
-    if "label" in all_views[0]:
-        # For training, only use labels from global views since we only return global embeddings
-        if self.training:
-            out["label"] = torch.cat([view["label"] for view in global_views], dim=0)
-        else:
-            # For validation, use all labels since we return all embeddings
-            out["label"] = torch.cat([view["label"] for view in all_views], dim=0)
+    label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+    for key in label_keys:
+        if key in all_views[0]:
+            # For training, only use labels from global views since we only return global embeddings
+            if self.training:
+                out[key] = torch.cat([view[key] for view in global_views], dim=0)
+            else:
+                # For validation, use all labels since we return all embeddings
+                out[key] = torch.cat([view[key] for view in all_views], dim=0)
 
     if not self.training:
         # During validation, just process all views through teacher
@@ -817,8 +845,10 @@ def dinov2_forward(self, batch, stage):
     else:
         # Single view validation
         images = batch["image"]
-        if "label" in batch:
-            out["label"] = batch["label"]
+        label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+        for key in label_keys:
+            if key in batch:
+                out[key] = batch[key]
 
         with torch.no_grad():
             teacher_features = self.backbone.forward_teacher(images)
@@ -829,11 +859,13 @@ def dinov2_forward(self, batch, stage):
     batch_size = all_views[0]["image"].shape[0]
 
     # Concatenate labels for callbacks - only from global views for probes
-    if "label" in all_views[0]:
-        if self.training:
-            out["label"] = torch.cat([view["label"] for view in global_views], dim=0)
-        else:
-            out["label"] = torch.cat([view["label"] for view in all_views], dim=0)
+    label_keys = ["label", "label_mktrf", "label_smb", "label_hml", "label_rmw", "label_cma"]
+    for key in label_keys:
+        if key in all_views[0]:
+            if self.training:
+                out[key] = torch.cat([view[key] for view in global_views], dim=0)
+            else:
+                out[key] = torch.cat([view[key] for view in all_views], dim=0)
 
     if not self.training:
         # During validation, just process all views through teacher
