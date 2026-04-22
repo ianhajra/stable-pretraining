@@ -254,9 +254,7 @@ if args.dataset == "ff":
                 "eval/linear_probe_rmw_balanced_acc",
                 "eval/linear_probe_cma_balanced_acc",
             ]
-            print("DEBUG: available callback_metrics keys:", list(trainer.callback_metrics.keys()))
             vals = [trainer.callback_metrics.get(k) for k in keys]
-            print("DEBUG: FF factor balanced_acc values:", vals)
             # Robust float conversion
             def to_float(v):
                 if v is None:
