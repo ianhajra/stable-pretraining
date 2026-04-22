@@ -254,8 +254,17 @@ if args.dataset == "ff":
                 "linear_probe_rmw/val/balanced_acc",
                 "linear_probe_cma/val/balanced_acc",
             ]
+            print("DEBUG: available callback_metrics keys:", list(trainer.callback_metrics.keys()))
             vals = [trainer.callback_metrics.get(k) for k in keys]
-            vals = [v.item() if v is not None else float('nan') for v in vals]
+            print("DEBUG: FF factor balanced_acc values:", vals)
+            # Robust float conversion
+            def to_float(v):
+                if v is None:
+                    return float('nan')
+                if hasattr(v, 'item'):
+                    return float(v.item())
+                return float(v)
+            vals = [to_float(v) for v in vals]
             avg = float('nan') if any([v != v for v in vals]) else sum(vals) / len(vals)
             pl_module.log("linear_probe_ff_avg/val/balanced_acc", avg, on_epoch=True, prog_bar=False, sync_dist=True)
     avg_factor_acc_cb = AverageFactorAccuracy()
