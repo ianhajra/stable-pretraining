@@ -148,32 +148,33 @@ EOF
 
 
 # ─── SP500: gaf_mtf ───────────────────────────────────────────────────────────
-header "SP500 × gaf_mtf (8 transforms)"
+# header "SP500 × gaf_mtf (8 transforms)"
 
-for T in "${TRANSFORMS[@]}"; do
-    JOB_NAME="abl_tfm_${ABBREV[$T]}_gaf_sp500_w${WINDOW_SIZE_GAF}"
-    echo "  Submitting: $JOB_NAME  (transform=$T)"
-    submit_job "$JOB_NAME" "$SP500_BASE/gaf_mtf/w${WINDOW_SIZE_GAF}" 11 $WINDOW_SIZE_GAF gaf_mtf sp500 $T
-done
+# for T in "${TRANSFORMS[@]}"; do
+#     JOB_NAME="abl_tfm_${ABBREV[$T]}_gaf_sp500_w${WINDOW_SIZE_GAF}"
+#     echo "  Submitting: $JOB_NAME  (transform=$T)"
+#     submit_job "$JOB_NAME" "$SP500_BASE/gaf_mtf/w${WINDOW_SIZE_GAF}" 11 $WINDOW_SIZE_GAF gaf_mtf sp500 $T
+# done
 
 
 # ─── SP500: candlestick ───────────────────────────────────────────────────────
 header "SP500 × candlestick (8 transforms)"
 
 for T in "${TRANSFORMS[@]}"; do
-    JOB_NAME="abl_tfm_${ABBREV[$T]}_candle_sp500_w${WINDOW_SIZE_CANDLE}"
+    PADDED_CANDLE=$(printf "%03d" $WINDOW_SIZE_CANDLE)
+    JOB_NAME="abl_tfm_${ABBREV[$T]}_candle_sp500_w${PADDED_CANDLE}"
     echo "  Submitting: $JOB_NAME  (transform=$T)"
-    submit_job "$JOB_NAME" "$SP500_BASE/candlestick/w${WINDOW_SIZE_CANDLE}" 11 $WINDOW_SIZE_CANDLE candlestick sp500 $T
+    submit_job "$JOB_NAME" "$SP500_BASE/candlestick/w${PADDED_CANDLE}" 11 $WINDOW_SIZE_CANDLE candlestick sp500 $T
 done
 
 # ─── FF: heatmap ──────────────────────────────────────────────────────────────
-header "FF × heatmap (8 transforms)"
+# header "FF × heatmap (8 transforms)"
 
-for T in "${TRANSFORMS[@]}"; do
-    JOB_NAME="abl_tfm_${ABBREV[$T]}_heat_ff_w${WINDOW_SIZE_FF}"
-    echo "  Submitting: $JOB_NAME  (transform=$T)"
-    submit_job "$JOB_NAME" "$FF_BASE/heatmap/w${WINDOW_SIZE_FF}" 5 $WINDOW_SIZE_FF heatmap ff $T
-done
+# for T in "${TRANSFORMS[@]}"; do
+#     JOB_NAME="abl_tfm_${ABBREV[$T]}_heat_ff_w${WINDOW_SIZE_FF}"
+#     echo "  Submitting: $JOB_NAME  (transform=$T)"
+#     submit_job "$JOB_NAME" "$FF_BASE/heatmap/w${WINDOW_SIZE_FF}" 5 $WINDOW_SIZE_FF heatmap ff $T
+# done
 
 # ─── Summary ──────────────────────────────────────────────────────────────────
 echo ""
