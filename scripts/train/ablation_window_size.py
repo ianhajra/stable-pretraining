@@ -248,11 +248,11 @@ if args.dataset == "ff":
     class AverageFactorAccuracy(pl.Callback):
         def on_validation_epoch_end(self, trainer, pl_module):
             keys = [
-                "linear_probe_mktrf/val/balanced_acc",
-                "linear_probe_smb/val/balanced_acc",
-                "linear_probe_hml/val/balanced_acc",
-                "linear_probe_rmw/val/balanced_acc",
-                "linear_probe_cma/val/balanced_acc",
+                "eval/linear_probe_mktrf_balanced_acc",
+                "eval/linear_probe_smb_balanced_acc",
+                "eval/linear_probe_hml_balanced_acc",
+                "eval/linear_probe_rmw_balanced_acc",
+                "eval/linear_probe_cma_balanced_acc",
             ]
             print("DEBUG: available callback_metrics keys:", list(trainer.callback_metrics.keys()))
             vals = [trainer.callback_metrics.get(k) for k in keys]
@@ -266,7 +266,7 @@ if args.dataset == "ff":
                 return float(v)
             vals = [to_float(v) for v in vals]
             avg = float('nan') if any([v != v for v in vals]) else sum(vals) / len(vals)
-            pl_module.log("linear_probe_ff_avg/val/balanced_acc", avg, on_epoch=True, prog_bar=False, sync_dist=True)
+            pl_module.log("eval/linear_probe_ff_avg_balanced_acc", avg, on_epoch=True, prog_bar=False, sync_dist=True)
     avg_factor_acc_cb = AverageFactorAccuracy()
 else:
     avg_factor_acc_cb = None
