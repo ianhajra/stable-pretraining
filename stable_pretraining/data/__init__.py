@@ -4,7 +4,7 @@ This module provides dataset utilities, data loading, transformations,
 and other data-related functionality for the stable-pretraining framework.
 """
 
-from . import dataset_stats, sampler, synthetic_data, transforms
+from . import dataset_stats, sampler, synthetic_data, transforms, transforms_custom
 from .collate import Collator
 from .datasets import Dataset, FromTorchDataset, HFDataset, Subset
 from .download import bulk_download, download
@@ -36,6 +36,7 @@ __all__ = [
     "transforms",
     "sampler",
     "synthetic_data",
+    "transforms_custom",
     # Core classes
     "DataModule",
     "Collator",
