@@ -58,7 +58,7 @@ SP500_BASE="/oscar/scratch/ihajra/finance/sp500_encoded"
 FF_BASE="/oscar/scratch/ihajra/finance/ff_encoded"
 WINDOW_SIZE_GAF=126
 WINDOW_SIZE_CANDLE=20
-WINDOW_SIZE_FF=126
+WINDOW_SIZE_FF=20
 
 TRANSFORMS=(
     "random_resized_crop"

@@ -1,7 +1,6 @@
 """SimCLR single-transform ablation for financial imagery (ViT-Tiny backbone).
 
 Augmentation pipeline is reduced to exactly one transform per run.
-Window size is fixed at 63 for all runs in this ablation.
 All other settings are identical to ablation_window_size.py.
 """
 
