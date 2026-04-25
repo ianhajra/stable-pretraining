@@ -54,27 +54,15 @@ WINDOW_SIZE_FF=20         # FF × heatmap  (stored as w020 on disk)
 #       e.g. AUGMENTATIONS_GAF+=("my_new_transform")
 AUGMENTATIONS_GAF=(
     "random_resized_crop"
-    "horizontal_flip"
-    "color_jitter"
-    "random_grayscale"
-    "gaussian_blur"
-    "magnitude_scaling"
-    "gaussian_noise"
-    "temporal_masking"
 )
 
 # SP500 × candlestick augmentations
 # TODO: add augmentation names here to include them in the candlestick pipeline,
 #       e.g. AUGMENTATIONS_CANDLE+=("my_new_transform")
 AUGMENTATIONS_CANDLE=(
-    "random_resized_crop"
-    "horizontal_flip"
     "color_jitter"
-    "random_grayscale"
     "gaussian_blur"
-    "magnitude_scaling"
     "gaussian_noise"
-    "temporal_masking"
 )
 
 # FF × heatmap augmentations
@@ -82,11 +70,7 @@ AUGMENTATIONS_CANDLE=(
 #       e.g. AUGMENTATIONS_HEATMAP+=("my_new_transform")
 AUGMENTATIONS_HEATMAP=(
     "random_resized_crop"
-    "horizontal_flip"
-    "color_jitter"
-    "random_grayscale"
-    "gaussian_blur"
-    "magnitude_scaling"
-    "gaussian_noise"
     "temporal_masking"
+    "color_jitter"
+    "gaussian_noise"
 )
