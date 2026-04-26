@@ -65,6 +65,8 @@ NUM_WORKERS = 4
 
 # ── Reproducibility ────────────────────────────────────────────────────────────
 pl.seed_everything(SEED, workers=True)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 
 # ── Augmentation pipeline ──────────────────────────────────────────────────────
